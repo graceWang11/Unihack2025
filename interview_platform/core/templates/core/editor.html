@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Real-Time Code Editor</title>
+    <script>
+        const socket = new WebSocket("ws://localhost:8000/ws/editor/");
+
+        socket.onmessage = function(event) {
+            document.getElementById("editor").value = JSON.parse(event.data).content;
+        };
+
+        function sendUpdate() {
+            const content = document.getElementById("editor").value;
+            socket.send(JSON.stringify({ "content": content }));
+        }
+    </script>
+</head>
+<body>
+    <h1>Real-Time Code Editor</h1>
+    <textarea id="editor" onkeyup="sendUpdate()" rows="10" cols="50"></textarea>
+</body>
+</html>

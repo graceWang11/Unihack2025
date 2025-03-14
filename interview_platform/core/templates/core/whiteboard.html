@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Shared Whiteboard</title>
+    <script>
+        const socket = new WebSocket("ws://localhost:8000/ws/whiteboard/");
+        let canvas, ctx;
+
+        window.onload = function () {
+            canvas = document.getElementById("whiteboard");
+            ctx = canvas.getContext("2d");
+
+            canvas.addEventListener("mousemove", draw);
+        };
+
+        function draw(event) {
+            if (event.buttons !== 1) return; // Only draw when mouse is clicked
+
+            ctx.fillStyle = "black";
+            ctx.beginPath();
+            ctx.arc(event.clientX, event.clientY, 2, 0, 2 * Math.PI);
+            ctx.fill();
+
+            const drawData = { x: event.clientX, y: event.clientY };
+            socket.send(JSON.stringify({ "draw_data": drawData }));
+        }
+
+        socket.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            ctx.fillStyle = "black";
+            ctx.beginPath();
+            ctx.arc(data.draw_data.x, data.draw_data.y, 2, 0, 2 * Math.PI);
+            ctx.fill();
+        };
+    </script>
+</head>
+<body>
+    <h1>Shared Whiteboard</h1>
+    <canvas id="whiteboard" width="800" height="500" style="border:1px solid black;"></canvas>
+</body>
+</html>

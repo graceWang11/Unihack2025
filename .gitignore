@@ -1,0 +1,37 @@
+# 🚀 Python & Django Ignore Rules
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+.env
+*.sqlite3
+*.log
+
+# 🚀 Virtual Environment
+venv/
+ENV/
+env/
+.venv/
+
+# 🚀 Ignore system files
+.DS_Store
+Thumbs.db
+
+# 🚀 Ignore compiled or cache files
+*.swp
+*.swo
+
+# 🚀 Ignore VS Code & JetBrains IDE files
+.vscode/
+.idea/
+
+# 🚀 Ignore Django Secrets & Credentials
+config.json
+db.sqlite3
+*.env
+*.pem
+
+# 🚀 Ignore Node.js if used for frontend
+node_modules/
+package-lock.json
