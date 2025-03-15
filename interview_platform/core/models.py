@@ -70,6 +70,11 @@ class InterviewSession(models.Model):
             self.save(update_fields=['is_active'])
         return self.is_active
     
+    def is_expired(self):
+        """Check if the session has expired."""
+        now = timezone.now()
+        return now > self.end_time
+    
     class Meta:
         ordering = ['-start_time']
 

@@ -136,6 +136,12 @@ function initRoom(roomId) {
 				// Remove the navigation warning
 				window.onbeforeunload = null;
 				
+				// Mark the session as expired on the server
+				socket.send(JSON.stringify({
+					'type': 'expire_session',
+					'room': roomId
+				}));
+				
 				// Show alert and redirect
 				alert('Your interview session has ended. Thank you for participating!');
 				window.location.href = '/';

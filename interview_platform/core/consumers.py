@@ -75,6 +75,16 @@ class WSConsumer(AsyncWebsocketConsumer):
 						end_time = datetime.datetime.now() + datetime.timedelta(seconds=duration)
 						room.end_time = end_time
 						print(f"Setting timer for room {room_id} to end at {end_time}")
+						
+						# Also update the database session end time
+						try:
+							from core.models import InterviewSession
+							session = InterviewSession.objects.get(id=room_id)
+							session.end_time = end_time
+							session.save()
+							print(f"Updated database session {room_id} end time to {end_time}")
+						except Exception as e:
+							print(f"Error updating database session end time: {str(e)}")
 					else:
 						end_time = room.end_time
 						print(f"Timer for room {room_id} already set to end at {end_time}")
@@ -109,6 +119,19 @@ class WSConsumer(AsyncWebsocketConsumer):
 							}))
 					except Exception as e:
 						print(f"Error getting timer: {str(e)}")
+			elif data["type"] == "expire_session":
+				# Mark the session as expired
+				room_id = data.get("room")
+				print(f"Marking session {room_id} as expired")
+				
+				try:
+					from core.models import InterviewSession
+					session = InterviewSession.objects.get(id=room_id)
+					session.is_active = False
+					session.save()
+					print(f"Marked session {room_id} as inactive")
+				except Exception as e:
+					print(f"Error marking session as expired: {str(e)}")
 		elif "join" in data:
 			# Add user to room
 			room = server.get_room(data["join"])

@@ -20,7 +20,23 @@ except AttributeError:
     print("EmailJS settings not found. Email notifications will be disabled.")
 
 def home_view(request):
-    return render(request, 'core/home.html')
+    """View for the home page, showing active sessions."""
+    # Get all active sessions
+    active_sessions = InterviewSession.objects.filter(is_active=True)
+    
+    # Update the status of each session
+    for session in active_sessions:
+        # Check if it's actually expired
+        if session.is_expired():
+            session.is_active = False
+            session.save()
+    
+    # Get the updated list of active sessions
+    active_sessions = InterviewSession.objects.filter(is_active=True)
+    
+    return render(request, 'core/home.html', {
+        'active_sessions': active_sessions
+    })
 
 def room_view(request, id):
     """View for the interview room with shared editor and whiteboard."""
@@ -30,6 +46,12 @@ def room_view(request, id):
         # Try to get the session by ID
         session = InterviewSession.objects.get(id=id)
         print(f"Found session: {session.title}")
+        
+        # Check if session has expired
+        if session.is_expired():
+            print(f"Session {id} has expired")
+            messages.error(request, "This session has expired and is no longer available.")
+            return redirect('home')
         
         # Check if session is active
         if not session.is_active:
@@ -111,6 +133,7 @@ def create_session(request):
             title=title,
             description=description,
             start_time=start_time,
+            end_time=start_time + timezone.timedelta(minutes=15),  # 15 minute session
             created_by=admin_user
         )
         
@@ -148,6 +171,14 @@ def join_session(request):
         try:
             session = InterviewSession.objects.get(access_code=access_code)
             print(f"Found session: {session.id} - {session.title}")
+            
+            # Check if session has expired
+            if session.is_expired():
+                print(f"Session {session.id} has expired")
+                return render(request, "core/home.html", {
+                    "error": "This session has expired and is no longer available.",
+                    "access_code": access_code
+                })
             
             # Check if session is active
             if not session.is_active:
