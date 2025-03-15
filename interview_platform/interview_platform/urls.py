@@ -16,10 +16,14 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from core.views import editor_view,whiteboard_view
+from core.views import editor_view, whiteboard_view, home_view
+from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('home/', home_view, name='home'),
     path('editor/', editor_view, name='editor'),
     path('whiteboard/', whiteboard_view, name='whiteboard'),
 ]
+
+urlpatterns += staticfiles_urlpatterns()
