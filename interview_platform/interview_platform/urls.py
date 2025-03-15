@@ -24,6 +24,7 @@ urlpatterns = [
     path('home/', home_view, name='home'),
     path('editor/', editor_view, name='editor'),
     path('whiteboard/', whiteboard_view, name='whiteboard'),
+    path('home/', home_view, name='home')
 ]
 
 urlpatterns += staticfiles_urlpatterns()
