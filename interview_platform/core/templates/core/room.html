@@ -34,11 +34,16 @@
     
     // Initialize the connection when the page loads
     document.addEventListener('DOMContentLoaded', function() {
+        console.log("Room page loaded, initializing room:", roomId);
+        
         // Connect to the room
         initRoom(roomId);
         
-        // Start the 15-minute timer
-        startSessionTimer(1 * 60); // 1 minute for testing
+        // Start the timer on the server (only the first tab will actually set the timer)
+        setTimeout(function() {
+            console.log("Starting session timer");
+            startSessionTimer(60); // 1 minute for testing
+        }, 1000); // Longer delay to ensure WebSocket is connected
         
         // Set up the text change handler
         document.getElementById('editor').addEventListener('keyup', function() {

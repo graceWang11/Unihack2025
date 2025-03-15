@@ -9,6 +9,7 @@ class Room:
 		self.users = []
 		self.editor = Editor()
 		self.whiteboard = Whiteboard()
+		self.end_time = None  # Will store the session end time
 
 	def remove_user(self, id):
 		for user in self.users:

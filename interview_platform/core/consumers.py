@@ -2,6 +2,7 @@
 # websocket logic
 
 import json
+import datetime
 from src.server import server
 from channels.generic.websocket import AsyncWebsocketConsumer
 
@@ -60,6 +61,54 @@ class WSConsumer(AsyncWebsocketConsumer):
 							"data": data["data"]
 						}
 					)
+			elif data["type"] == "start_timer":
+				# Start a timer for the room
+				room_id = data.get("room")
+				duration = data.get("duration", 15 * 60)  # Default 15 minutes
+				
+				print(f"Received start_timer request for room {room_id}, duration {duration} seconds")
+				
+				room = server.get_room(room_id)
+				if room:
+					# Only set the end time if it's not already set
+					if not room.end_time:
+						end_time = datetime.datetime.now() + datetime.timedelta(seconds=duration)
+						room.end_time = end_time
+						print(f"Setting timer for room {room_id} to end at {end_time}")
+					else:
+						end_time = room.end_time
+						print(f"Timer for room {room_id} already set to end at {end_time}")
+					
+					# Broadcast the timer to all users in the room
+					print(f"Broadcasting timer to {len(room.users)} users in room {room_id}")
+					for user in room.users:
+						try:
+							if user.id in user_channels:
+								await self.channel_layer.send(
+									user_channels[user.id],
+									{
+										"type": "timer_update",
+										"end_time": end_time.isoformat()
+									}
+								)
+								print(f"Sent timer update to user {user.id}")
+							else:
+								print(f"User {user.id} not found in user_channels")
+						except Exception as e:
+							print(f"Error sending timer to user {user.id}: {str(e)}")
+			elif data["type"] == "get_timer":
+				# Client is requesting the current timer state
+				u = self.scope.get('user_id')
+				if u:
+					try:
+						room = server.get_room_from_user(u)
+						if room and hasattr(room, 'end_time') and room.end_time is not None:
+							await self.send(text_data=json.dumps({
+								"type": "timer_update",
+								"end_time": room.end_time.isoformat()
+							}))
+					except Exception as e:
+						print(f"Error getting timer: {str(e)}")
 		elif "join" in data:
 			# Add user to room
 			room = server.get_room(data["join"])
@@ -72,6 +121,7 @@ class WSConsumer(AsyncWebsocketConsumer):
 			
 			# Create new user
 			uid = server.new_user(data["join"])
+			self.scope['user_id'] = uid  # Store user ID in scope
 			user_channels[uid] = self.channel_name
 			
 			# Send user ID and initial room state
@@ -86,6 +136,16 @@ class WSConsumer(AsyncWebsocketConsumer):
 				"type": "wb_buffer",
 				"data": room.whiteboard.get_state()
 			}))
+			
+			# Send timer state if it exists
+			try:
+				if hasattr(room, 'end_time') and room.end_time is not None:
+					await self.send(text_data=json.dumps({
+						"type": "timer_update",
+						"end_time": room.end_time.isoformat()
+					}))
+			except Exception as e:
+				print(f"Error sending timer state: {str(e)}")
 
 	# Broadcast text update
 	async def txt_update(self, event):
@@ -99,4 +159,11 @@ class WSConsumer(AsyncWebsocketConsumer):
 		await self.send(text_data=json.dumps({
 			"type": "wb_buffer",
 			"data": event["data"]
+		}))
+
+	# Broadcast timer update
+	async def timer_update(self, event):
+		await self.send(text_data=json.dumps({
+			"type": "timer_update",
+			"end_time": event["end_time"]
 		}))

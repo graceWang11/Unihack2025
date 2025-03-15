@@ -9,12 +9,19 @@ function initRoom(roomId) {
 	
 	// Current user id
 	let uid = "";
+	let timerInterval = null;
+	let sessionEndTime = null;
 
 	socket.onopen = function(e) {
 		console.log("WebSocket connection established");
 		// Join the room
 		socket.send(JSON.stringify({
 			'join': roomId
+		}));
+		
+		// Request timer state
+		socket.send(JSON.stringify({
+			'type': 'get_timer'
 		}));
 	};
 	
@@ -52,8 +59,10 @@ function initRoom(roomId) {
 			document.getElementById("editor").value = data.data;
 		} else if (data.type == "wb_buffer") {
 			wb.setCanvasData(data.data);
+		} else if (data.type == "timer_update") {
+			// Update the timer with the server's time
+			updateTimerFromServer(data.end_time);
 		}
-
 	};
 
 	// Make onTextChange available globally
@@ -70,47 +79,88 @@ function initRoom(roomId) {
 
 	// Store socket in window object so it can be accessed globally
 	window.roomSocket = socket;
+	
+	// Function to update timer from server time
+	function updateTimerFromServer(endTimeStr) {
+		try {
+			// Parse the end time from the server
+			sessionEndTime = new Date(endTimeStr);
+			console.log("Session will end at:", sessionEndTime, "Current time:", new Date());
+			
+			// Clear any existing timer
+			if (timerInterval) {
+				clearInterval(timerInterval);
+			}
+			
+			// Start a new timer based on the server end time
+			updateTimerDisplay();
+			timerInterval = setInterval(updateTimerDisplay, 1000);
+		} catch (error) {
+			console.error("Error updating timer:", error);
+		}
+	}
+	
+	// Function to update the timer display
+	function updateTimerDisplay() {
+		try {
+			const timerElement = document.getElementById('timer');
+			if (!timerElement || !sessionEndTime) {
+				console.error("Timer element or sessionEndTime not found");
+				return;
+			}
+			
+			const now = new Date();
+			const timeLeft = Math.max(0, Math.floor((sessionEndTime - now) / 1000));
+			
+			console.log("Time left:", timeLeft, "seconds", "Current time:", now.toISOString());
+			
+			// Format time as MM:SS
+			const minutes = Math.floor(timeLeft / 60);
+			const secs = timeLeft % 60;
+			timerElement.textContent = `Time remaining: ${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+			
+			// Change color when less than 5 minutes
+			if (timeLeft < 300) {
+				timerElement.className = 'alert alert-warning';
+			}
+			
+			// Change color when less than 1 minute
+			if (timeLeft < 60) {
+				timerElement.className = 'alert alert-danger';
+			}
+			
+			// End session when timer reaches 0
+			if (timeLeft <= 0) {
+				clearInterval(timerInterval);
+				
+				// Remove the navigation warning
+				window.onbeforeunload = null;
+				
+				// Show alert and redirect
+				alert('Your interview session has ended. Thank you for participating!');
+				window.location.href = '/';
+			}
+		} catch (error) {
+			console.error("Error updating timer display:", error);
+		}
+	}
 }
 
-// Session timer function
+// Session timer function - now just sends a request to start the timer on the server
 function startSessionTimer(seconds) {
-	const timerElement = document.getElementById('timer');
-	let timeLeft = seconds;
-	
-	// Update timer every second
-	const timerInterval = setInterval(function() {
-		timeLeft--;
-		
-		// Format time as MM:SS
-		const minutes = Math.floor(timeLeft / 60);
-		const secs = timeLeft % 60;
-		timerElement.textContent = `Time remaining: ${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-		
-		// Change color when less than 5 minutes
-		if (timeLeft < 300) {
-			timerElement.className = 'alert alert-warning';
-		}
-		
-		// Change color when less than 1 minute
-		if (timeLeft < 60) {
-			timerElement.className = 'alert alert-danger';
-		}
-		
-		// End session when timer reaches 0
-		if (timeLeft <= 0) {
-			clearInterval(timerInterval);
-			
-			// Remove the navigation warning
-			window.onbeforeunload = null;
-			
-			// Show alert and redirect
-			alert('Your interview session has ended. Thank you for participating!');
-			window.location.href = '/';
-		}
-	}, 1000);
-	
-	// Store timer in window object so it can be accessed globally
-	window.sessionTimer = timerInterval;
+	console.log("Starting session timer for", seconds, "seconds");
+	const roomId = document.getElementById('roomId').value;
+	if (roomId && window.roomSocket) {
+		console.log("Sending start_timer request to server for room", roomId);
+		// Send request to start timer on the server
+		window.roomSocket.send(JSON.stringify({
+			'type': 'start_timer',
+			'room': roomId,
+			'duration': seconds
+		}));
+	} else {
+		console.error("Cannot start timer: roomId or roomSocket not available");
+	}
 }
 
 // Make sure this function is called when the page loads
