@@ -35,6 +35,11 @@ class InterviewSession(models.Model):
             return f"EXPIRED SESSION: {self.start_time.strftime('%Y-%m-%d')}"
     
     def save(self, *args, **kwargs):
+        """Auto-set session expiry and generate access code."""
+        # Set end_time to 15 minutes after start_time if not set
+        if not self.end_time:
+            self.end_time = self.start_time + timezone.timedelta(minutes=15)
+
         # Generate a random access code if not provided
         if not self.access_code:
             self.access_code = str(uuid.uuid4())[:8].upper()

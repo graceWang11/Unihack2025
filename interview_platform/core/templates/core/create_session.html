@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<header>
+    <body>
+        <form method="POST" action="{% url 'create_session' %}">
+            {% csrf_token %}
+            <label for="title">Session Title:</label>
+            <input type="text" name="title" required>
+            
+            <label for="description">Description:</label>
+            <textarea name="description"></textarea>
+            
+            <label for="candidate_emails">Candidate Emails (comma separated):</label>
+            <input type="text" name="candidate_emails" placeholder="candidate1@example.com, candidate2@example.com">
+            
+            <button type="submit">Create Session</button>
+            <a href="{% url 'home' %}" class="btn btn-secondary">Cancel</a>
+        </form>        
+    </body>
+</header>

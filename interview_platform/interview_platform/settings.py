@@ -138,3 +138,17 @@ print(BASE_DIR / STATIC_URL)
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# EmailJS settings with defaults to prevent errors
+EMAILJS_USER_ID = os.getenv("EMAILJS_USER_ID", "")
+EMAILJS_SERVICE_ID = os.getenv("EMAILJS_SERVICE_ID", "")
+EMAILJS_TEMPLATE_ID = os.getenv("EMAILJS_TEMPLATE_ID", "")
+
+# Email settings - Use console backend for development
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# Keep the other settings for when you want to switch back
+# EMAIL_HOST = 'smtp.gmail.com'
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+# EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')

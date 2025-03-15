@@ -9,18 +9,23 @@ user_channels = {}
 
 class WSConsumer(AsyncWebsocketConsumer):
 	async def connect(self):
-		# await self.channel_layer.group_add("users", self.channel_name)
+		print("WebSocket connection established")
 		await self.accept()
 
 	async def disconnect(self, close_code):
-		u = None
-		for user in user_channels:
-			if user_channels[user] == self.channel_name:
-				u = user
-				break
+		print(f"WebSocket disconnected with code: {close_code}")
+		# Get the user ID from the scope
+		u = self.scope.get('user_id')
 		
-		del user_channels[u]
-		server.remove_user(u)
+		# Only try to delete if user_id exists
+		if u is not None and u in user_channels:
+			del user_channels[u]
+		
+		# Only try to remove user if it exists
+		try:
+			server.remove_user(u)
+		except Exception as e:
+			print(f"Error removing user: {str(e)}")
 		# await self.channel_layer.group_discard("users", self.channel_name)
 
 	async def receive(self, text_data):

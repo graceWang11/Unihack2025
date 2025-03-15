@@ -1,11 +1,81 @@
 {% extends "core/base.html" %}
 {% load static %}
+
+{% block style %}
+<style>
+    /* Prevent the page from being redirected */
+    body {
+        overflow: hidden;
+    }
+    
+    /* Make the editor and whiteboard fill the available space */
+    .editor-container, .whiteboard-container {
+        height: 70vh;
+    }
+    
+    #editor {
+        height: 100%;
+        width: 100%;
+        font-family: monospace;
+    }
+    
+    #whiteboard {
+        background-color: white;
+    }
+</style>
+{% endblock %}
+
 {% block script %}
 <script src="{% static 'js/whiteboard.js' %}"></script>
 <script src="{% static 'js/room.js' %}"></script>
-<script>let roomId = "{{ room }}";</script>
+<script>
+    // Pass the room ID to JavaScript
+    const roomId = "{{ room }}";
+    
+    // Initialize the connection when the page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        // Connect to the room
+        initRoom(roomId);
+        
+        // Start the 15-minute timer
+        startSessionTimer(1 * 60); // 1 minute for testing
+        
+        // Set up the text change handler
+        document.getElementById('editor').addEventListener('keyup', function() {
+            if (typeof window.onTextChange === 'function') {
+                window.onTextChange();
+            }
+        });
+    });
+    
+    // Prevent navigation away from the page
+    window.onbeforeunload = function() {
+        return "Leaving this page will end your interview session. Are you sure?";
+    };
+</script>
 {% endblock %}
+
 {% block content %}
-<textarea id="editor" onkeyup="onTextChange()" rows="10" cols="50"></textarea>
-<canvas id="whiteboard" width="800" height="500" style="border:1px solid black;"></canvas>
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <h2>Interview Session: {{ session.title }}</h2>
+            <div id="timer" class="alert alert-info">Time remaining: 01:00</div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-12 col-md-6 editor-container">
+            <h3>Code Editor</h3>
+            <textarea id="editor" class="form-control"></textarea>
+        </div>
+        <div class="col-12 col-md-6 whiteboard-container">
+            <h3>Whiteboard</h3>
+            <canvas id="whiteboard" width="600" height="400" style="border:1px solid black;"></canvas>
+        </div>
+    </div>
+    
+    <!-- Hidden input for room ID -->
+    <input type="hidden" id="roomId" value="{{ room }}">
+</div>
 {% endblock %}
