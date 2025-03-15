@@ -13,7 +13,7 @@ class Server:
 		return user.id
 	
 	def remove_user(self, id):
-		self.get_room(room).users.remove(user)
+		self.get_room(user_rooms[id]).users.remove(user)
 		self.user_rooms.pop(user.id, None)
 	
 	def new_room(self):
