@@ -5,7 +5,7 @@
 <style>
     /* Prevent the page from being redirected */
     body {
-        overflow: hidden;
+        overflow: auto;
     }
     
     /* Make the editor and whiteboard fill the available space */
@@ -26,6 +26,12 @@
     body {
         font-family: Consolas, "Courier New", Courier, monospace;
       }
+
+      .editor-container, .whiteboard-container {
+        height: auto;  /* Allow the editor container to grow with content */
+        flex: 1;
+    }
+
       .editor {
         display: inline-flex;
         gap: 10px;
