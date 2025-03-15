@@ -1,37 +1,37 @@
+{% load static %}
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Shared Whiteboard</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Shared Whiteboard</title>
+	<script src="{% static 'js/whiteboard.js' %}"></script>
     <script>
-        const socket = new WebSocket("ws://localhost:8000/ws/whiteboard/");
+        const socket = new WebSocket("ws://localhost:8000/ws/"); // TODO: make this url configurable (not localhost)
         let canvas, ctx;
+		let lines;
+		let currentLine;
 
         window.onload = function () {
-            canvas = document.getElementById("whiteboard");
-            ctx = canvas.getContext("2d");
-
-            canvas.addEventListener("mousemove", draw);
+			wb = new Whiteboard("whiteboard", onDraw);
         };
 
-        function draw(event) {
-            if (event.buttons !== 1) return; // Only draw when mouse is clicked
+		function onDraw(buff, opt) {
+			wb.draw(buff, opt);
 
-            ctx.fillStyle = "black";
-            ctx.beginPath();
-            ctx.arc(event.clientX, event.clientY, 2, 0, 2 * Math.PI);
-            ctx.fill();
+			socket.send(JSON.stringify({ type: "wb_buffer", data: wb.getCanvasData() }));
+		}
 
-            const drawData = { x: event.clientX, y: event.clientY };
-            socket.send(JSON.stringify({ "draw_data": drawData }));
-        }
+        // receive canvas data from websockets
+		socket.onmessage = function(event) {
+			const data = JSON.parse(event.data);
+            
+			if (data.type != "wb_buffer") {
+				return;
+			}
 
-        socket.onmessage = function(event) {
-            const data = JSON.parse(event.data);
-            ctx.fillStyle = "black";
-            ctx.beginPath();
-            ctx.arc(data.draw_data.x, data.draw_data.y, 2, 0, 2 * Math.PI);
-            ctx.fill();
+			wb.setCanvasData(data.data);
         };
     </script>
 </head>

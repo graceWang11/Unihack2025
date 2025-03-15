@@ -1,18 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Real-Time Code Editor</title>
     <script>
-        const socket = new WebSocket("ws://localhost:8000/ws/editor/");
+        const socket = new WebSocket("ws://localhost:8000/ws/");
 
         socket.onmessage = function(event) {
-            document.getElementById("editor").value = JSON.parse(event.data).content;
+			const data = JSON.parse(event.data);
+			
+			if (data.type != "txt_update") {
+				return;
+			}
+
+            document.getElementById("editor").value = data.data;
         };
 
         function sendUpdate() {
             const content = document.getElementById("editor").value;
-            socket.send(JSON.stringify({ "content": content }));
+            socket.send(JSON.stringify({ type: "txt_update", data: content }));
         }
     </script>
 </head>
