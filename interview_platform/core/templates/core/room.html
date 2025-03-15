@@ -22,6 +22,47 @@
     #whiteboard {
         background-color: white;
     }
+
+    body {
+        font-family: Consolas, "Courier New", Courier, monospace;
+      }
+      .editor {
+        display: inline-flex;
+        gap: 10px;
+        font-family: Consolas, "Courier New", Courier, monospace;
+        line-height: 21px;
+        background-color: transparent;
+        border-radius: 2px;
+        padding: 20px 10px;
+      }
+      textarea {
+        line-height: 21px;
+        overflow-y: hidden;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: black;
+        min-width: 500px;
+        outline: none;
+        resize: none;
+        font-family: Consolas, "Courier New", Courier, monospace;
+      }
+      .numbers {
+        width: 20px;
+        text-align: right;
+        margin-right: 10px;
+      }
+
+      .numbers span {
+        counter-increment: linenumber;
+      }
+
+      .numbers span::before {
+        content: counter(linenumber);
+        display: block;
+        color: #506882;
+      }
+
 </style>
 {% endblock %}
 
@@ -57,6 +98,28 @@
     window.onbeforeunload = function() {
         return "Leaving this page will end your interview session. Are you sure?";
     };
+
+    const textarea = document.querySelector("textarea");
+      const numbers = document.querySelector(".numbers");
+      textarea.addEventListener("keyup", (e) => {
+        const num = e.target.value.split("\n").length;
+        numbers.innerHTML = Array(num).fill("<span></span>").join("");
+        
+      });
+      textarea.addEventListener("keydown", (event) => {
+        if (event.key === "Tab") {
+          const start = textarea.selectionStart;
+          const end = textarea.selectionEnd;
+
+          textarea.value =
+            textarea.value.substring(0, start) +
+            "\t" +
+            textarea.value.substring(end);
+
+          event.preventDefault();
+        }
+      });
+
 </script>
 {% endblock %}
 
@@ -72,7 +135,12 @@
     <div class="row">
         <div class="col-12 col-md-6 editor-container">
             <h3>Code Editor</h3>
-            <textarea id="editor" class="form-control"></textarea>
+            <div class="editor">
+                <div class="numbers">
+                  <span></span>
+                </div>
+                <textarea placeholder="Start here, good luck!"></textarea>
+              </div>
         </div>
         <div class="col-12 col-md-6 whiteboard-container">
             <h3>Whiteboard</h3>
