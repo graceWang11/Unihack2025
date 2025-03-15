@@ -6,3 +6,6 @@ def editor_view(request):
 
 def whiteboard_view(request):
     return render(request, 'core/whiteboard.html')
+
+def home_view(request):
+    return render(request, 'core/home.html')
