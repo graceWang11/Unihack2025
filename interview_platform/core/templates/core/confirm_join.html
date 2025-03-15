@@ -1,31 +1,36 @@
 {% extends "core/base.html" %}
+
 {% block content %}
 <div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
             <div class="card">
-                <div class="card-header bg-warning">
-                    <h3>Important: Session Rules</h3>
+                <div class="card-header bg-primary text-white">
+                    <h3 class="card-title mb-0">Confirm Join Session</h3>
                 </div>
                 <div class="card-body">
-                    <h4>You are about to join: {{ session.title }}</h4>
-                    <p>Please read the following rules before proceeding:</p>
+                    <h4>{{ session.title }}</h4>
+                    <p>{{ session.description|default:"No description provided" }}</p>
                     
-                    <ul class="list-group mb-4">
-                        <li class="list-group-item">Once you enter the session, you cannot go back to the home page</li>
-                        <li class="list-group-item">The session will automatically end after 15 minutes</li>
-                        <li class="list-group-item">Your work will be saved automatically</li>
-                        <li class="list-group-item">Please do not refresh the page or navigate away</li>
-                    </ul>
+                    <div class="alert alert-info">
+                        <p><strong>Session Details:</strong></p>
+                        <ul>
+                            <li>Access Code: {{ access_code }}</li>
+                            <li>Start Time: {{ session.start_time }}</li>
+                            <li>Created By: {{ session.created_by.email }}</li>
+                        </ul>
+                    </div>
                     
-                    <p>Are you ready to begin?</p>
+                    <p>Are you sure you want to join this interview session?</p>
                     
-                    <form action="{% url 'join_session' %}" method="POST">
+                    <form method="post" action="{% url 'join_session' %}">
                         {% csrf_token %}
                         <input type="hidden" name="access_code" value="{{ access_code }}">
-                        <input type="hidden" name="confirm" value="true">
-                        <button type="submit" class="btn btn-success">Yes, I'm Ready</button>
-                        <a href="{% url 'home' %}" class="btn btn-secondary">No, Go Back</a>
+                        <input type="hidden" name="confirm" value="1">
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'home' %}" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-success">Join Session</button>
+                        </div>
                     </form>
                 </div>
             </div>

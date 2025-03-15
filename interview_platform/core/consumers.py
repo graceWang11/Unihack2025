@@ -5,6 +5,7 @@ import json
 import datetime
 from src.server import server
 from channels.generic.websocket import AsyncWebsocketConsumer
+from channels.db import database_sync_to_async
 
 user_channels = {}
 
@@ -125,11 +126,8 @@ class WSConsumer(AsyncWebsocketConsumer):
 				print(f"Marking session {room_id} as expired")
 				
 				try:
-					from core.models import InterviewSession
-					session = InterviewSession.objects.get(id=room_id)
-					session.is_active = False
-					session.save()
-					print(f"Marked session {room_id} as inactive")
+					# Use database_sync_to_async to update the database
+					await self.mark_session_expired(room_id)
 				except Exception as e:
 					print(f"Error marking session as expired: {str(e)}")
 		elif "join" in data:
@@ -190,3 +188,15 @@ class WSConsumer(AsyncWebsocketConsumer):
 			"type": "timer_update",
 			"end_time": event["end_time"]
 		}))
+
+	@database_sync_to_async
+	def mark_session_expired(self, room_id):
+		"""Mark a session as expired in the database."""
+		from core.models import InterviewSession
+		try:
+			session = InterviewSession.objects.get(id=room_id)
+			session.is_active = False
+			session.save()
+			print(f"Successfully marked session {room_id} as inactive")
+		except Exception as e:
+			print(f"Database error marking session as expired: {str(e)}")

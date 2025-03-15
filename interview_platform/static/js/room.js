@@ -144,7 +144,7 @@ function initRoom(roomId) {
 				
 				// Show alert and redirect
 				alert('Your interview session has ended. Thank you for participating!');
-				window.location.href = '/';
+				window.location.href = '/?refresh=1';
 			}
 		} catch (error) {
 			console.error("Error updating timer display:", error);

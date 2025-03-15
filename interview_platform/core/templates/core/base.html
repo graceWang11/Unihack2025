@@ -12,14 +12,8 @@
     <!-- Static header -->
     <header class="bg-dark text-white p-3">
         <div class="container">
-            <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex justify-content-center align-items-center">
                 <h1 class="h3 mb-0">Crazy Powerful Interview Platform</h1>
-                <div>
-                    <a href="{% url 'home' %}" class="btn btn-outline-light">Home</a>
-                    {% if '/room/' not in request.path %}
-                    <a href="{% url 'create_session' %}" class="btn btn-primary">Create Session</a>
-                    {% endif %}
-                </div>
             </div>
         </div>
     </header>

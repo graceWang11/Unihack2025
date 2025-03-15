@@ -49,36 +49,68 @@
 		<div class="col-12">
 			<div class="card">
 				<div class="card-header bg-info text-white">
-					<h3 class="card-title mb-0">Active Sessions</h3>
+					<div class="d-flex justify-content-between align-items-center">
+						<h3 class="card-title mb-0">Interview Sessions</h3>
+						<button id="refresh-sessions" class="btn btn-sm btn-light">
+							<i class="bi bi-arrow-clockwise"></i> Refresh
+						</button>
+					</div>
 				</div>
-				<div class="card-body">
-					{% if active_sessions %}
-						<div class="list-group">
-							{% for session in active_sessions %}
-								<div class="list-group-item list-group-item-action">
-									<div class="d-flex w-100 justify-content-between">
-										<h5 class="mb-1">{{ session.title }}</h5>
-										<small>ID: {{ session.id }} | Code: {{ session.access_code }}</small>
-									</div>
-									<p class="mb-1">{{ session.description|default:"No description provided" }}</p>
-									<small>Created: {{ session.date_created|date:"F j, Y, g:i a" }}</small>
-									<div class="mt-2">
-										<form method="post" action="{% url 'join_session' %}">
-											{% csrf_token %}
-											<input type="hidden" name="access_code" value="{{ session.access_code }}">
-											<input type="hidden" name="confirm" value="1">
-											<button type="submit" class="btn btn-sm btn-success">Join Session</button>
-										</form>
-									</div>
-								</div>
-							{% endfor %}
-						</div>
-					{% else %}
-						<p class="text-center">No active sessions available at the moment.</p>
-					{% endif %}
+				<div class="card-body" id="sessions-container">
+					{% include "core/partials/sessions_list.html" %}
 				</div>
 			</div>
 		</div>
 	</div>
 </div>
+{% endblock %}
+
+{% block script %}
+<script>
+    // Check if we need to refresh the page (after a session expires)
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('refresh')) {
+            // Remove the refresh parameter from the URL
+            const newUrl = window.location.pathname;
+            window.history.replaceState({}, document.title, newUrl);
+            
+            // Refresh the page after a short delay
+            setTimeout(function() {
+                window.location.reload();
+            }, 500);
+        }
+        
+        // Auto-refresh the home page every 10 seconds to show updated session status
+        if (window.location.pathname === '/' || window.location.pathname === '') {
+            setInterval(function() {
+                fetch('/?ajax=1')
+                    .then(response => response.text())
+                    .then(html => {
+                        // Extract just the sessions section
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
+                        const newSessionsSection = doc.querySelector('.row.mt-4');
+                        
+                        if (newSessionsSection) {
+                            // Replace the current sessions section
+                            const currentSessionsSection = document.querySelector('.row.mt-4');
+                            if (currentSessionsSection) {
+                                currentSessionsSection.innerHTML = newSessionsSection.innerHTML;
+                            }
+                        }
+                    })
+                    .catch(error => console.error('Error refreshing sessions:', error));
+            }, 10000); // Refresh every 10 seconds
+        }
+        
+        // Add refresh button functionality
+        const refreshButton = document.getElementById('refresh-sessions');
+        if (refreshButton) {
+            refreshButton.addEventListener('click', function() {
+                window.location.reload();
+            });
+        }
+    });
+</script>
 {% endblock %}

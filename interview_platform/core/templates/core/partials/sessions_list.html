@@ -1,0 +1,37 @@
+{% if active_sessions or expired_sessions %}
+    <div class="list-group">
+        {% for session in active_sessions %}
+            <div class="list-group-item list-group-item-action">
+                <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1">{{ session.title }} <span class="badge bg-success">Active</span></h5>
+                    <small>ID: {{ session.id }} | Code: {{ session.access_code }}</small>
+                </div>
+                <p class="mb-1">{{ session.description|default:"No description provided" }}</p>
+                <small>Created: {{ session.date_created|date:"F j, Y, g:i a" }}</small>
+                <div class="mt-2">
+                    <form method="post" action="{% url 'join_session' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="access_code" value="{{ session.access_code }}">
+                        <button type="submit" class="btn btn-sm btn-success">Join Session</button>
+                    </form>
+                </div>
+            </div>
+        {% endfor %}
+        
+        {% for session in expired_sessions %}
+            <div class="list-group-item list-group-item-action disabled">
+                <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1">{{ session.title }} <span class="badge bg-danger">Expired</span></h5>
+                    <small>ID: {{ session.id }} | Code: {{ session.access_code }}</small>
+                </div>
+                <p class="mb-1">{{ session.description|default:"No description provided" }}</p>
+                <small>Created: {{ session.date_created|date:"F j, Y, g:i a" }}</small>
+                <div class="mt-2">
+                    <button class="btn btn-sm btn-secondary" disabled>Session Expired</button>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <p class="text-center">No sessions available at the moment.</p>
+{% endif %} 

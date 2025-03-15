@@ -20,22 +20,38 @@ except AttributeError:
     print("EmailJS settings not found. Email notifications will be disabled.")
 
 def home_view(request):
-    """View for the home page, showing active sessions."""
-    # Get all active sessions
-    active_sessions = InterviewSession.objects.filter(is_active=True)
+    """View for the home page, showing active and expired sessions."""
+    # Get all sessions
+    all_sessions = InterviewSession.objects.all().order_by('-start_time')
     
-    # Update the status of each session
-    for session in active_sessions:
-        # Check if it's actually expired
+    active_sessions = []
+    expired_sessions = []
+    
+    # Categorize sessions as active or expired
+    for session in all_sessions:
+        # Force update the session status
+        session.update_status()
+        
         if session.is_expired():
             session.is_active = False
             session.save()
+            expired_sessions.append(session)
+        elif session.is_active:
+            active_sessions.append(session)
     
-    # Get the updated list of active sessions
-    active_sessions = InterviewSession.objects.filter(is_active=True)
+    # Limit expired sessions to the 5 most recent
+    expired_sessions = expired_sessions[:5]
+    
+    # If this is an AJAX request, render just the sessions partial
+    if request.GET.get('ajax') == '1':
+        return render(request, 'core/partials/sessions_list.html', {
+            'active_sessions': active_sessions,
+            'expired_sessions': expired_sessions
+        })
     
     return render(request, 'core/home.html', {
-        'active_sessions': active_sessions
+        'active_sessions': active_sessions,
+        'expired_sessions': expired_sessions
     })
 
 def room_view(request, id):
@@ -165,7 +181,12 @@ def join_session(request):
     if request.method == "POST":
         access_code = request.POST.get("access_code")
         confirm = request.POST.get("confirm")
-        print(f"Attempting to join with access code: {access_code}")
+        print(f"Attempting to join with access code: {access_code}, confirm={confirm}")
+        
+        # Check if confirm_join.html exists
+        template_path = os.path.join(settings.BASE_DIR, 'core', 'templates', 'core', 'confirm_join.html')
+        if not os.path.exists(template_path):
+            print(f"WARNING: Template file {template_path} does not exist!")
         
         # Try to find the session with this access code
         try:
@@ -196,14 +217,15 @@ def join_session(request):
                     })
             
             # If not confirmed yet, show confirmation page
-            if not confirm:
+            if not confirm or confirm != "1":
+                print("Showing confirmation page")
                 return render(request, "core/confirm_join.html", {
                     "session": session,
                     "access_code": access_code
                 })
             
             # Redirect to the room view with the session ID
-            print(f"Redirecting to room/{session.id}/")
+            print(f"Confirmed! Redirecting to room/{session.id}/")
             return redirect('room', id=session.id)
             
         except InterviewSession.DoesNotExist:
