@@ -3,8 +3,9 @@
 {% block script %}
 <script src="{% static 'js/whiteboard.js' %}"></script>
 <script src="{% static 'js/room.js' %}"></script>
+<script>let roomId = "{{ room }}";</script>
 {% endblock %}
 {% block content %}
-    <textarea id="editor" onkeyup="onTextChange()" rows="10" cols="50"></textarea>
-	<canvas id="whiteboard" width="800" height="500" style="border:1px solid black;"></canvas>
+<textarea id="editor" onkeyup="onTextChange()" rows="10" cols="50"></textarea>
+<canvas id="whiteboard" width="800" height="500" style="border:1px solid black;"></canvas>
 {% endblock %}

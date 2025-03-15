@@ -1,6 +1,7 @@
 import nanoid
-from editor import Editor
-from whiteboard import Whiteboard
+from src.editor import Editor
+from src.whiteboard import Whiteboard
+from src.user import User
 
 class Room:
 	def __init__(self):
