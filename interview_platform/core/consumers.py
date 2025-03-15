@@ -13,9 +13,14 @@ class WSConsumer(AsyncWebsocketConsumer):
 		await self.accept()
 
 	async def disconnect(self, close_code):
+		u = None
 		for user in user_channels:
 			if user_channels[user] == self.channel_name:
-				del user_channels[user]
+				u = user
+				break
+		
+		del user_channels[u]
+		server.remove_user(u)
 		# await self.channel_layer.group_discard("users", self.channel_name)
 
 	async def receive(self, text_data):
@@ -25,6 +30,9 @@ class WSConsumer(AsyncWebsocketConsumer):
 			if data["type"] == "txt_update":
 				room = server.get_room_from_user(data['id'])
 				
+				room.editor.set_text(data["data"])
+				
+				# Broadcast new text
 				for user in room.users:
 					await self.channel_layer.send(
 						user_channels[user.id],
@@ -35,7 +43,10 @@ class WSConsumer(AsyncWebsocketConsumer):
 					)
 			elif data["type"] == "wb_buffer":
 				room = server.get_room_from_user(data['id'])
+				# Update whiteboard state
+				room.whiteboard.set_state(data["data"])
 
+				# Broadcast new state
 				for user in room.users:
 					await self.channel_layer.send(
 						user_channels[user.id],
