@@ -1,0 +1,2 @@
+class Whiteboard:
+	state = ""
