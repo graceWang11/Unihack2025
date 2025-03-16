@@ -1,16 +1,19 @@
+#!/usr/bin/env python
 import os
-import django
 import sys
-
-# Set up Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'interview_platform.settings')
-django.setup()
-
-# Run migrations
+import django
 from django.core.management import call_command
-print("Running migrations...")
-call_command('migrate')
-print("Migrations complete!")
+
+if __name__ == "__main__":
+    # Set up Django environment
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "interview_platform.settings")
+    django.setup()
+    
+    # Run migrations
+    print("Running migrations...")
+    call_command('migrate')
+    
+    print("Migrations complete!")
 
 # Create a superuser if needed
 if len(sys.argv) > 1 and sys.argv[1] == '--create-superuser':
