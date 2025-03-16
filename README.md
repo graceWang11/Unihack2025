@@ -70,8 +70,7 @@ daphne -b 0.0.0.0 -p 8000 interview_platform.asgi:application
 
 ### 🖥️ Usage
 
-    Open http://127.0.0.1:8000/editor/ → Start real-time text editing
-    Open http://127.0.0.1:8000/whiteboard/ → Start drawing in real-time
+    Open http://127.0.0.1:8000 → Start a real time live interview.
     Open in two browser windows and test real-time updates.
 
 ### 📌 Technologies Used

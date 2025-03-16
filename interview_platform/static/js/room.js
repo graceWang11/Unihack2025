@@ -85,7 +85,7 @@ function initRoom(roomId) {
 		try {
 			// Parse the end time from the server
 			sessionEndTime = new Date(endTimeStr);
-			console.log("Session will end at:", sessionEndTime, "Current time:", new Date());
+			console.log("Session will end at:", sessionEndTime, "Current time:", Date.now());
 			
 			// Clear any existing timer
 			if (timerInterval) {
@@ -109,7 +109,7 @@ function initRoom(roomId) {
 				return;
 			}
 			
-			const now = new Date();
+			const now = Date.now();
 			const timeLeft = Math.max(0, Math.floor((sessionEndTime - now) / 1000));
 			
 			console.log("Time left:", timeLeft, "seconds", "Current time:", now.toISOString());
@@ -183,3 +183,11 @@ document.addEventListener('DOMContentLoaded', function() {
 		console.error("Room ID element not found");
 	}
 });
+
+function setWBColor() {
+	wb.strokeStyle = document.getElementById("colorPicker").value;
+}
+
+function setWBline() {
+	wb.lineWidth = document.getElementById("colorPicker").value;
+}
