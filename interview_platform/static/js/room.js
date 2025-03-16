@@ -147,156 +147,86 @@ function onTextChange() {
 	}
 }
 
-// Update our timer from server end time
+// Simple timer implementation - no fancy synchronization
 function updateTimerFromServer(endTimeStr) {
-	try {
-		// Parse the end time from the server - carefully
-		console.log("Raw end time from server:", endTimeStr);
-		
-		// Handle different formats
-		let endTime;
-		if (typeof endTimeStr === 'string') {
-			if (endTimeStr.includes('T') || endTimeStr.includes('-')) {
-				// ISO format or similar string
-				endTime = new Date(endTimeStr);
-			} else {
-				// Likely a timestamp as string
-				endTime = parseInt(endTimeStr, 10);
-			}
-		} else if (typeof endTimeStr === 'number') {
-			// Already a number
-			endTime = endTimeStr;
-		} else {
-			console.error("Invalid end time format:", typeof endTimeStr, endTimeStr);
-			return;
-		}
-		
-		// Convert Date object to timestamp if needed
-		if (endTime instanceof Date) {
-			if (isNaN(endTime.getTime())) {
-				console.error("Failed to parse end time into valid date");
-				return;
-			}
-			// Store as seconds timestamp
-			window.sessionEndTimestamp = Math.floor(endTime.getTime() / 1000);
-		} else {
-			// Already a timestamp
-			window.sessionEndTimestamp = endTime;
-		}
-		
-		console.log("Stored end timestamp:", window.sessionEndTimestamp);
-		
-		// Clear any existing timer
-		if (window.timerInterval) {
-			clearInterval(window.timerInterval);
-		}
-		
-		// Start a new timer
-		updateTimerDisplay();
-		window.timerInterval = setInterval(updateTimerDisplay, 1000);
-		
-		console.log("Timer started successfully");
-	} catch (error) {
-		console.error("Error updating timer from server:", error);
+	console.log("Setting up timer with:", endTimeStr);
+	// Clear any existing timer
+	if (window.timerInterval) {
+		clearInterval(window.timerInterval);
 	}
+	
+	// Just use a simple countdown from 15 minutes
+	window.remainingSeconds = 900; // 15 minutes
+	
+	// Start a new countdown
+	updateTimerDisplay();
+	window.timerInterval = setInterval(updateTimerDisplay, 1000);
+	
+	console.log("Simple timer started");
 }
 
-// Update timer display based on current time and stored end time
+// Simple timer display function
 function updateTimerDisplay() {
 	try {
-		const timerElement = document.getElementById("timer");
+		const timerElement = document.getElementById('timer');
 		if (!timerElement) {
 			console.error("Timer element not found");
 			return;
 		}
 		
-		// If no end time is set, use fallback timer
-		if (!window.sessionEndTime && !window.sessionEndTimestamp) {
-			console.log("No end time set, starting fallback timer");
-			startFallbackTimer();
+		// Decrement the time
+		window.remainingSeconds--;
+		
+		// Make sure we don't go below zero
+		if (window.remainingSeconds < 0) {
+			window.remainingSeconds = 0;
+			if (window.timerInterval) {
+				clearInterval(window.timerInterval);
+			}
+			
+			// Remove navigation warning
+			window.onbeforeunload = null;
+			
+			// Alert and redirect
+			alert('Your interview session has ended.');
+			window.location.href = '/';
 			return;
 		}
 		
-		// Use sessionEndTimestamp if available, otherwise use sessionEndTime
-		const endTime = window.sessionEndTimestamp || Math.floor(window.sessionEndTime/1000);
-		
-		// Use server timestamp if available, otherwise use local time
-		const now = window.serverTimestamp 
-			? window.serverTimestamp 
-			: Math.floor(Date.now() / 1000);
-		
-		// Calculate time left in seconds
-		const timeLeft = Math.max(0, endTime - now);
-		
-		// Format time as MM:SS
-		const minutes = Math.floor(timeLeft / 60);
-		const seconds = timeLeft % 60;
+		// Format the time
+		const minutes = Math.floor(window.remainingSeconds / 60);
+		const seconds = window.remainingSeconds % 60;
 		const formattedTime = 
 			String(minutes).padStart(2, '0') + ':' + 
 			String(seconds).padStart(2, '0');
 		
 		timerElement.textContent = 'Time remaining: ' + formattedTime;
 		
-		// Change color when less than 5 minutes
-		if (timeLeft < 300) {
+		// Update timer classes based on time left
+		if (window.remainingSeconds < 60) {
+			timerElement.className = 'alert alert-danger';
+		} else if (window.remainingSeconds < 300) {
 			timerElement.className = 'alert alert-warning';
 		}
-		
-		// Change color when less than 1 minute
-		if (timeLeft < 60) {
-			timerElement.className = 'alert alert-danger';
-		}
-		
-		// End session when timer reaches 0
-		if (timeLeft <= 0) {
-			clearInterval(window.timerInterval);
-			
-			// Remove the navigation warning
-			window.onbeforeunload = null;
-			
-			// Mark the session as expired on the server
-			if (window.socket && window.socket.readyState === WebSocket.OPEN) {
-				window.socket.send(JSON.stringify({
-					'type': 'expire_session',
-					'room': document.getElementById('roomId').value
-				}));
-			}
-			
-			// Show alert and redirect
-			alert('Your interview session has ended. Thank you for participating!');
-			window.location.href = '/?refresh=1';
-		}
 	} catch (error) {
-		console.error("Error updating timer display:", error);
+		console.error("Error updating timer:", error);
 	}
 }
 
-// Session timer function - now just sends a request to start the timer on the server
+// Start a simple 15-minute timer
 function startSessionTimer(seconds) {
-	console.log("Starting session timer for", seconds, "seconds");
-	const roomId = document.getElementById('roomId').value;
+	console.log("Starting simple session timer for", seconds, "seconds");
 	
-	if (!roomId) {
-		console.error("Cannot start timer: roomId not available");
-		return;
+	if (window.timerInterval) {
+		clearInterval(window.timerInterval);
 	}
 	
-	if (!window.socket || window.socket.readyState !== WebSocket.OPEN) {
-		console.error("Cannot start timer: WebSocket not open");
-		return;
-	}
+	window.remainingSeconds = seconds || 900; // Default 15 minutes
 	
-	console.log("Sending start_timer request to server for room", roomId);
-	// Send request to start timer on the server
-	try {
-		window.socket.send(JSON.stringify({
-			'type': 'start_timer',
-			'room': roomId,
-			'duration': seconds
-		}));
-	} catch (error) {
-		console.error("Error sending start_timer request:", error);
-	}
+	updateTimerDisplay();
+	window.timerInterval = setInterval(updateTimerDisplay, 1000);
+	
+	console.log("Simple timer started successfully");
 }
 
 // Make startSessionTimer available globally
