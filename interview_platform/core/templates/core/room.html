@@ -78,10 +78,10 @@
             <h3>Whiteboard</h3>
             <canvas id="whiteboard" width="600" height="400" style="border:1px solid black;"></canvas>
             <div class="slidecontainer">
-              <input type="range" min="1" max="100" value="50" class="slider" id="myRange" onclick="setWBLine()">
+              <input type="range" min="1" max="10" value="5" class="slider" id="lineWidth" onchange="setWBLine()">
             </div>
-            <input type="color" onclick="setWBColor()">
-            <button class="btn btn-info" onclick="clear()">Clear</button>
+            <input type="color" id="colorPicker" onchange="setWBColor()">
+            <button class="btn btn-info" onclick="clearWhiteboard()">Clear</button>
         </div>
     </div>
     

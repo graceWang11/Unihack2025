@@ -189,6 +189,17 @@ function setWBColor() {
 	wb.strokeStyle = document.getElementById("colorPicker").value;
 }
 
-function setWBline() {
-	wb.lineWidth = document.getElementById("colorPicker").value;
+function setWBLine() {
+	wb.lineWidth = document.getElementById("lineWidth").value;
+}
+
+function clearWhiteboard() {
+	const canvas = document.getElementById("whiteboard");
+	const ctx = canvas.getContext("2d");
+	ctx.clearRect(0, 0, canvas.width, canvas.height);
+	
+	// Send the cleared whiteboard to other users
+	if (window.onDraw) {
+		window.onDraw(wb.getCanvasData(), {clear: true});
+	}
 }
