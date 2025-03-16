@@ -307,3 +307,11 @@ document.addEventListener('DOMContentLoaded', function() {
 		console.error("Room ID element not found");
 	}
 });
+
+function setWBColor() {
+	wb.options.strokeStyle = document.getElementById('colorPicker').value;
+}
+
+function setWBLine() {
+	wb.options.lineWidth = document.getElementById('lineWidth').value;
+}
