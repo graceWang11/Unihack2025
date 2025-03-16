@@ -166,3 +166,23 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 # Add whitenoise for static files
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# Add these settings for CSRF protection
+CSRF_TRUSTED_ORIGINS = [
+    'https://intervuplatform-production.up.railway.app',
+    'http://intervuplatform-production.up.railway.app',
+    'https://*.railway.app',
+    'http://*.railway.app'
+]
+
+# Security settings for production
+if not DEBUG:
+    # HTTPS settings
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = True
+    
+    # HSTS settings
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_PRELOAD = True
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
