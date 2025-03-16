@@ -106,7 +106,7 @@ class SessionCode(models.Model):
 class Session(models.Model):
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_sessions')
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_new_sessions')
     created_at = models.DateTimeField(auto_now_add=True)
     code = models.CharField(max_length=10, unique=True)
     active = models.BooleanField(default=True)
