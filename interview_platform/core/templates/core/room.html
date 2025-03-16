@@ -26,43 +26,34 @@
 {% endblock %}
 
 {% block script %}
-<script src="{% static 'js/whiteboard-controls.js' %}"></script>
-<script src="{% static 'js/whiteboard.js' %}"></script>
-<script src="{% static 'js/room.js' %}"></script>
+<script>
+    // Force reload of JS files to break cache
+    const cacheBuster = "?v=" + new Date().getTime();
+    document.write('<script src="{% static "js/whiteboard.js" %}' + cacheBuster + '"><\/script>');
+    document.write('<script src="{% static "js/room.js" %}' + cacheBuster + '"><\/script>');
+</script>
 <script>
     // Pass the room ID to JavaScript
     const roomId = "{{ room }}";
     
-    // Initialize the connection when the page loads
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log("Room page loaded, initializing room:", roomId);
-        
-        // Set up the text change handler
-        document.getElementById('editor').addEventListener('keyup', function() {
-            if (typeof window.onTextChange === 'function') {
-                window.onTextChange();
-            }
-        });
-        
-        // Start the timer on the server (only the first tab will actually set the timer)
-        setTimeout(function() {
-            console.log("Checking if WebSocket is ready to start timer");
-            if (window.roomSocket && window.roomSocket.readyState === WebSocket.OPEN) {
-                console.log("WebSocket is open, starting session timer");
-                window.startSessionTimer(900);
-            } else {
-                console.log("WebSocket not ready, waiting longer");
-                setTimeout(function() {
-                    console.log("Trying again to start timer");
-                    if (window.roomSocket) {
-                        window.startSessionTimer(900);
-                    } else {
-                        console.error("Could not start timer: WebSocket not available");
-                    }
-                }, 3000);
-            }
-        }, 2000);
-    });
+    // Start the timer on the server (only the first tab will actually set the timer)
+    setTimeout(function() {
+        console.log("Checking if WebSocket is ready to start timer");
+        if (window.roomSocket && window.roomSocket.readyState === WebSocket.OPEN) {
+            console.log("WebSocket is open, starting session timer");
+            window.startSessionTimer(900);
+        } else {
+            console.log("WebSocket not ready, waiting longer");
+            setTimeout(function() {
+                console.log("Trying again to start timer");
+                if (window.roomSocket) {
+                    window.startSessionTimer(900);
+                } else {
+                    console.error("Could not start timer: WebSocket not available");
+                }
+            }, 3000);
+        }
+    }, 2000);
     
     // Prevent navigation away from the page
     window.onbeforeunload = function() {

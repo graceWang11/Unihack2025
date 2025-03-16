@@ -1,9 +1,13 @@
+// room.js - Version 2.0.0 (Forced update)
+console.log("Loading room.js version 2.0.0");
+
 // Global variables
 let wb = null;
 let socket = null;
 let uid = "";
 let timerInterval = null;
 let sessionEndTime = null;
+let whiteBoardInitialized = false;
 
 // Initialize the room connection
 function initRoom(roomId) {
@@ -25,13 +29,13 @@ function initRoom(roomId) {
 			'join': roomId
 		}));
 		
+		// Initialize whiteboard immediately after socket is connected
+		initWhiteboard();
+		
 		// Request timer state
 		socket.send(JSON.stringify({
 			'type': 'get_timer'
 		}));
-		
-		// Initialize whiteboard after socket is connected
-		initWhiteboard();
 	};
 	
 	socket.onclose = function(e) {
@@ -90,7 +94,7 @@ function initRoom(roomId) {
 
 // Initialize the whiteboard
 function initWhiteboard() {
-	console.log("Initializing whiteboard");
+	console.log("Initializing whiteboard (version 2.0)");
 	const canvas = document.getElementById("whiteboard");
 	if (!canvas) {
 		console.error("Whiteboard canvas not found");
@@ -98,58 +102,139 @@ function initWhiteboard() {
 	}
 	
 	try {
-		// Create the whiteboard object
-		window.wb = new Whiteboard("whiteboard", handleDrawEvent);
+		// Create the whiteboard object with delayed verification
+		window.wb = new Whiteboard("whiteboard", function(buff, opt) {
+			// This is the onDraw callback
+			if (window.wb) {
+				window.wb.draw(buff, opt);
+				if (socket && socket.readyState === WebSocket.OPEN) {
+					socket.send(JSON.stringify({ 
+						id: uid, 
+						type: "wb_buffer", 
+						data: window.wb.getCanvasData() 
+					}));
+				}
+			}
+		});
 		
-		// Make wb globally available
+		// Make wb globally available and mark as initialized
 		wb = window.wb;
+		whiteBoardInitialized = true;
+		
+		// Also set onDraw globally
+		window.onDraw = function(buff, opt) {
+			if (window.wb) {
+				window.wb.draw(buff, opt);
+				if (socket && socket.readyState === WebSocket.OPEN) {
+					socket.send(JSON.stringify({ 
+						id: uid, 
+						type: "wb_buffer", 
+						data: window.wb.getCanvasData() 
+					}));
+				}
+			}
+		};
 		
 		console.log("Whiteboard initialized successfully");
+		
+		// Initialize the whiteboard controls
+		initWhiteboardControls();
 	} catch (error) {
 		console.error("Error initializing whiteboard:", error);
 	}
 }
 
-// Handle draw events from the whiteboard
-function handleDrawEvent(buff, opt) {
-	console.log("Draw event received");
-	if (!window.wb) {
-		console.error("Cannot handle draw event: Whiteboard not initialized");
-		return;
-	}
+// Initialize whiteboard controls directly
+function initWhiteboardControls() {
+	console.log("Setting up whiteboard controls");
 	
-	if (!socket || socket.readyState !== WebSocket.OPEN) {
-		console.error("Cannot send draw event: WebSocket not open");
-		return;
-	}
+	// Define clearWhiteboard function globally
+	window.clearWhiteboard = function() {
+		console.log("Clearing whiteboard (v2)");
+		if (!window.wb) {
+			console.error("Cannot clear: Whiteboard not initialized");
+			return;
+		}
+		
+		try {
+			const canvas = document.getElementById("whiteboard");
+			if (!canvas) {
+				console.error("Whiteboard canvas not found");
+				return;
+			}
+			
+			const ctx = canvas.getContext("2d");
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
+			console.log("Canvas cleared successfully");
+			
+			// Send the cleared whiteboard to other users
+			if (socket && socket.readyState === WebSocket.OPEN) {
+				socket.send(JSON.stringify({ 
+					id: uid, 
+					type: "wb_buffer", 
+					data: window.wb.getCanvasData() 
+				}));
+				console.log("Clear event sent to server");
+			}
+		} catch (error) {
+			console.error("Error clearing whiteboard:", error);
+		}
+	};
 	
-	try {
-		// Draw locally
-		window.wb.draw(buff, opt);
+	// Define setWBColor function globally
+	window.setWBColor = function() {
+		console.log("Setting whiteboard color (v2)");
+		if (!window.wb) {
+			console.error("Cannot set color: Whiteboard not initialized");
+			return;
+		}
 		
-		// Send to server
-		socket.send(JSON.stringify({ 
-			id: uid, 
-			type: "wb_buffer", 
-			data: window.wb.getCanvasData() 
-		}));
+		try {
+			const colorPicker = document.getElementById("colorPicker");
+			if (!colorPicker) {
+				console.error("Color picker not found");
+				return;
+			}
+			
+			window.wb.strokeStyle = colorPicker.value;
+			console.log("Color set to:", colorPicker.value);
+		} catch (error) {
+			console.error("Error setting whiteboard color:", error);
+		}
+	};
+	
+	// Define setWBLine function globally
+	window.setWBLine = function() {
+		console.log("Setting whiteboard line width (v2)");
+		if (!window.wb) {
+			console.error("Cannot set line width: Whiteboard not initialized");
+			return;
+		}
 		
-		console.log("Draw event sent to server");
-	} catch (error) {
-		console.error("Error handling draw event:", error);
-	}
+		try {
+			const lineWidth = document.getElementById("lineWidth");
+			if (!lineWidth) {
+				console.error("Line width control not found");
+				return;
+			}
+			
+			window.wb.lineWidth = lineWidth.value;
+			console.log("Line width set to:", lineWidth.value);
+		} catch (error) {
+			console.error("Error setting whiteboard line width:", error);
+		}
+	};
 }
-
-// Make handleDrawEvent available globally
-window.onDraw = handleDrawEvent;
 
 // Function to update timer from server time
 function updateTimerFromServer(endTimeStr) {
 	try {
-		// Parse the end time from the server
+		// Parse the end time from the server - carefully
+		console.log("Raw end time from server:", endTimeStr);
 		const endTime = new Date(endTimeStr);
+		console.log("Parsed end time:", endTime);
+		
 		sessionEndTime = endTime;
-		console.log("Session will end at:", endTime);
 		
 		// Clear any existing timer
 		if (timerInterval) {
@@ -159,6 +244,8 @@ function updateTimerFromServer(endTimeStr) {
 		// Start a new timer based on the server end time
 		updateTimerDisplay();
 		timerInterval = setInterval(updateTimerDisplay, 1000);
+		
+		console.log("Timer started successfully");
 	} catch (error) {
 		console.error("Error updating timer:", error);
 	}
@@ -168,16 +255,22 @@ function updateTimerFromServer(endTimeStr) {
 function updateTimerDisplay() {
 	try {
 		const timerElement = document.getElementById('timer');
-		if (!timerElement || !sessionEndTime) {
-			console.error("Timer element or sessionEndTime not found");
+		if (!timerElement) {
+			console.error("Timer element not found");
 			return;
 		}
 		
+		if (!sessionEndTime) {
+			console.error("Session end time not set");
+			return;
+		}
+		
+		// Calculate time left in milliseconds
 		const now = new Date();
-		const timeLeftMs = sessionEndTime - now;
+		const timeLeftMs = sessionEndTime.getTime() - now.getTime();
 		const timeLeft = Math.max(0, Math.floor(timeLeftMs / 1000));
 		
-		console.log("Time left:", timeLeft, "seconds");
+		console.log("Time remaining:", timeLeft, "seconds");
 		
 		// Format time as MM:SS
 		const minutes = Math.floor(timeLeft / 60);
@@ -251,7 +344,7 @@ window.startSessionTimer = startSessionTimer;
 
 // Initialize the room when the page loads
 document.addEventListener('DOMContentLoaded', function() {
-	console.log("DOM loaded, initializing room");
+	console.log("DOM loaded, initializing room (v2.0)");
 	const roomIdElement = document.getElementById('roomId');
 	if (roomIdElement) {
 		const roomId = roomIdElement.value;
