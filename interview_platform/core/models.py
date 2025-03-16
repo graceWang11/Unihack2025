@@ -102,3 +102,22 @@ class SessionCode(models.Model):
     
     def __str__(self):
         return f"Code: {self.code} for {self.session}"
+
+class Session(models.Model):
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_sessions')
+    created_at = models.DateTimeField(auto_now_add=True)
+    code = models.CharField(max_length=10, unique=True)
+    active = models.BooleanField(default=True)
+    end_time = models.DateTimeField(null=True, blank=True)
+    
+    def __str__(self):
+        return self.title
+
+    def is_active(self):
+        if not self.active:
+            return False
+        if self.end_time and self.end_time < timezone.now():
+            return False
+        return True

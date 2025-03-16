@@ -143,45 +143,63 @@ function onTextChange() {
 	}
 }
 
-// Function to update timer from server time
+// Update our timer from server end time
 function updateTimerFromServer(endTimeStr) {
 	try {
 		// Parse the end time from the server - carefully
 		console.log("Raw end time from server:", endTimeStr);
 		
-		// Handle the date parsing carefully
+		// Handle different formats
 		let endTime;
 		if (typeof endTimeStr === 'string') {
-			endTime = new Date(endTimeStr);
+			if (endTimeStr.includes('T') || endTimeStr.includes('-')) {
+				// ISO format or similar string
+				endTime = new Date(endTimeStr);
+			} else {
+				// Likely a timestamp as string
+				endTime = new Date(parseInt(endTimeStr, 10));
+			}
 		} else if (typeof endTimeStr === 'number') {
-			endTime = new Date(endTimeStr * 1000); // Convert seconds to milliseconds
+			// Unix timestamp in seconds or milliseconds
+			if (endTimeStr < 20000000000) { // If less than year 2603 (in seconds)
+				endTime = new Date(endTimeStr * 1000); // Convert seconds to milliseconds
+			} else {
+				endTime = new Date(endTimeStr); // Already in milliseconds
+			}
 		} else {
-			console.error("Invalid end time format:", endTimeStr);
+			console.error("Invalid end time format:", typeof endTimeStr, endTimeStr);
 			return;
 		}
 		
 		console.log("Parsed end time:", endTime);
 		
-		window.sessionEndTime = endTime;
+		if (isNaN(endTime.getTime())) {
+			console.error("Failed to parse end time into valid date");
+			return;
+		}
+		
+		// Store end time as a timestamp to avoid date object issues
+		window.sessionEndTime = endTime.getTime();
 		
 		// Clear any existing timer
 		if (window.timerInterval) {
 			clearInterval(window.timerInterval);
 		}
 		
+		// Start a new timer
 		updateTimerDisplay();
 		window.timerInterval = setInterval(updateTimerDisplay, 1000);
 		
 		console.log("Timer started successfully");
 	} catch (error) {
-		console.error("Error updating timer:", error);
+		console.error("Error updating timer from server:", error);
 	}
 }
 
-// Function to update the timer display
+// Update timer display based on current time and stored end time
 function updateTimerDisplay() {
 	try {
-		const timerElement = document.getElementById('timer');
+		const timerElement = document.getElementById("timer");
 		if (!timerElement) {
 			console.error("Timer element not found");
 			return;
@@ -192,16 +210,9 @@ function updateTimerDisplay() {
 			return;
 		}
 		
-		// Calculate time left in milliseconds - handle both Date objects and numbers
-		const now = new Date();
-		let timeLeftMs;
-		
-		if (window.sessionEndTime instanceof Date) {
-			timeLeftMs = window.sessionEndTime.getTime() - now.getTime();
-		} else {
-			timeLeftMs = window.sessionEndTime - now.getTime();
-		}
-		
+		// Calculate time left in milliseconds - using timestamps directly
+		const now = new Date().getTime();
+		const timeLeftMs = window.sessionEndTime - now;
 		const timeLeft = Math.max(0, Math.floor(timeLeftMs / 1000));
 		
 		// Format time as MM:SS
