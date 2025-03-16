@@ -75,13 +75,10 @@ TEMPLATES = [
 WSGI_APPLICATION = 'interview_platform.wsgi.application'
 # ASGI Application for WebSockets
 ASGI_APPLICATION = 'interview_platform.asgi.application'
-# Channel Layers using Redis (for real-time updates)
+# Channel Layers using in-memory backend for development
 CHANNEL_LAYERS = {
     "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {
-            "hosts": [os.environ.get('REDIS_URL', 'redis://localhost:6379/0')],
-        },
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
     },
 }
 # Database
