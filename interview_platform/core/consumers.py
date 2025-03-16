@@ -8,7 +8,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from datetime import datetime, timedelta
 from django.utils import timezone
-from core.models import Session
+from core.models import InterviewSession
 
 user_channels = {}
 
@@ -17,6 +17,9 @@ class WSConsumer(AsyncWebsocketConsumer):
 		self.user_id = self.scope["user"].id if self.scope["user"].is_authenticated else "anon"
 		self.room_name = None
 		await self.accept()
+		
+		# Start background task to broadcast global time
+		asyncio.create_task(self.broadcast_time())
 
 	async def disconnect(self, close_code):
 		print(f"WebSocket disconnected with code: {close_code}")
@@ -129,13 +132,13 @@ class WSConsumer(AsyncWebsocketConsumer):
 	@database_sync_to_async
 	def update_session_end_time(self, room_id, duration):
 		try:
-			session = Session.objects.get(id=room_id)
+			session = InterviewSession.objects.get(id=room_id)
 			end_time = timezone.now() + timedelta(seconds=duration)
 			session.end_time = end_time
 			session.save()
 			return end_time
-		except Session.DoesNotExist:
-			print(f"Session with ID {room_id} not found")
+		except InterviewSession.DoesNotExist:
+			print(f"InterviewSession with ID {room_id} not found")
 			return None
 		except Exception as e:
 			print(f"Error updating session end time: {e}")
@@ -144,11 +147,32 @@ class WSConsumer(AsyncWebsocketConsumer):
 	@database_sync_to_async
 	def get_session_end_time(self, room_id):
 		try:
-			session = Session.objects.get(id=room_id)
+			session = InterviewSession.objects.get(id=room_id)
 			return session.end_time
-		except Session.DoesNotExist:
-			print(f"Session with ID {room_id} not found")
+		except InterviewSession.DoesNotExist:
+			print(f"InterviewSession with ID {room_id} not found")
 			return None
 		except Exception as e:
 			print(f"Error getting session end time: {e}")
 			return None
+
+	async def broadcast_time(self):
+		"""Broadcast global time to all clients periodically."""
+		while True:
+			if self.room_name:
+				# Send the current time to all clients in the room
+				await self.channel_layer.group_send(
+					self.room_name,
+					{
+						'type': 'global_time',
+						'timestamp': int(timezone.now().timestamp()),
+					}
+				)
+			await asyncio.sleep(5)  # Update every 5 seconds
+
+	async def global_time(self, event):
+		"""Send global time to the client"""
+		await self.send(text_data=json.dumps({
+			'type': 'global_time',
+			'timestamp': event['timestamp'],
+		}))

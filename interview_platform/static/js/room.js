@@ -7,6 +7,8 @@ window.uid = "";
 window.wb = null;
 window.timerInterval = null;
 window.sessionEndTime = null;
+window.serverTimestamp = null;
+window.sessionEndTimestamp = null;
 
 // Initialize the room connection
 function initRoom(roomId) {
@@ -82,6 +84,8 @@ function initRoom(roomId) {
 			} else if (data.type == "timer_update") {
 				// Update the timer with the server's time
 				updateTimerFromServer(data.end_time);
+			} else if (data.type === 'global_time') {
+				handleGlobalTime(data.timestamp);
 			}
 		} catch (error) {
 			console.error("Error processing WebSocket message:", error);
@@ -157,29 +161,30 @@ function updateTimerFromServer(endTimeStr) {
 				endTime = new Date(endTimeStr);
 			} else {
 				// Likely a timestamp as string
-				endTime = new Date(parseInt(endTimeStr, 10));
+				endTime = parseInt(endTimeStr, 10);
 			}
 		} else if (typeof endTimeStr === 'number') {
-			// Unix timestamp in seconds or milliseconds
-			if (endTimeStr < 20000000000) { // If less than year 2603 (in seconds)
-				endTime = new Date(endTimeStr * 1000); // Convert seconds to milliseconds
-			} else {
-				endTime = new Date(endTimeStr); // Already in milliseconds
-			}
+			// Already a number
+			endTime = endTimeStr;
 		} else {
 			console.error("Invalid end time format:", typeof endTimeStr, endTimeStr);
 			return;
 		}
 		
-		console.log("Parsed end time:", endTime);
-		
-		if (isNaN(endTime.getTime())) {
-			console.error("Failed to parse end time into valid date");
-			return;
+		// Convert Date object to timestamp if needed
+		if (endTime instanceof Date) {
+			if (isNaN(endTime.getTime())) {
+				console.error("Failed to parse end time into valid date");
+				return;
+			}
+			// Store as seconds timestamp
+			window.sessionEndTimestamp = Math.floor(endTime.getTime() / 1000);
+		} else {
+			// Already a timestamp
+			window.sessionEndTimestamp = endTime;
 		}
 		
-		// Store end time as a timestamp to avoid date object issues
-		window.sessionEndTime = endTime.getTime();
+		console.log("Stored end timestamp:", window.sessionEndTimestamp);
 		
 		// Clear any existing timer
 		if (window.timerInterval) {
@@ -205,15 +210,23 @@ function updateTimerDisplay() {
 			return;
 		}
 		
-		if (!window.sessionEndTime) {
-			console.error("Session end time not set");
+		// If no end time is set, use fallback timer
+		if (!window.sessionEndTime && !window.sessionEndTimestamp) {
+			console.log("No end time set, starting fallback timer");
+			startFallbackTimer();
 			return;
 		}
 		
-		// Calculate time left in milliseconds - using timestamps directly
-		const now = new Date().getTime();
-		const timeLeftMs = window.sessionEndTime - now;
-		const timeLeft = Math.max(0, Math.floor(timeLeftMs / 1000));
+		// Use sessionEndTimestamp if available, otherwise use sessionEndTime
+		const endTime = window.sessionEndTimestamp || Math.floor(window.sessionEndTime/1000);
+		
+		// Use server timestamp if available, otherwise use local time
+		const now = window.serverTimestamp 
+			? window.serverTimestamp 
+			: Math.floor(Date.now() / 1000);
+		
+		// Calculate time left in seconds
+		const timeLeft = Math.max(0, endTime - now);
 		
 		// Format time as MM:SS
 		const minutes = Math.floor(timeLeft / 60);
@@ -291,6 +304,16 @@ window.startSessionTimer = startSessionTimer;
 window.onTextChange = onTextChange;
 window.updateTimerDisplay = updateTimerDisplay;
 window.updateTimerFromServer = updateTimerFromServer;
+
+// Handler for global time events
+function handleGlobalTime(timestamp) {
+	window.serverTimestamp = timestamp;
+	
+	// If we have an end time, update the timer display
+	if (window.sessionEndTimestamp) {
+		updateTimerDisplay();
+	}
+}
 
 // Initialize the room when the page loads
 document.addEventListener('DOMContentLoaded', function() {
