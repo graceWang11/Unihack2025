@@ -13,7 +13,11 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 from dotenv import load_dotenv
 import os
-import dj_database_url
+try:
+    import dj_database_url
+except ImportError:
+    # For local development without dj_database_url
+    dj_database_url = None
 from django.core.management.utils import get_random_secret_key
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -27,7 +31,7 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', get_random_secret_key())
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.herokuapp.com', '.pythonanywhere.com', '.railway.app']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.herokuapp.com', '.pythonanywhere.com', '.railway.app', 'intervuplatform-production.up.railway.app']
 
 
 # Application definition
@@ -91,7 +95,7 @@ DATABASES = {
 }
 
 # Use PostgreSQL on production
-if 'DATABASE_URL' in os.environ:
+if 'DATABASE_URL' in os.environ and dj_database_url:
     DATABASES['default'] = dj_database_url.config(
         conn_max_age=600,
         conn_health_checks=True,
