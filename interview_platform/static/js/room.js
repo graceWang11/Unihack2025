@@ -5,6 +5,28 @@ let wb;
 function initRoom(roomId) {
 	console.log("Initializing room with ID:", roomId);
 	
+	// Initialize whiteboard immediately
+	if (document.getElementById("whiteboard")) {
+		console.log("Initializing whiteboard");
+		window.wb = new Whiteboard("whiteboard", function(buff, opt) {
+			// This is the onDraw callback
+			if (window.wb) {
+				window.wb.draw(buff, opt);
+				if (socket && socket.readyState === WebSocket.OPEN) {
+					socket.send(JSON.stringify({ 
+						id: uid, 
+						type: "wb_buffer", 
+						data: window.wb.getCanvasData() 
+					}));
+				}
+			}
+		});
+		// Make wb globally available
+		wb = window.wb;
+	} else {
+		console.error("Whiteboard element not found");
+	}
+	
 	// Connect to WebSocket - handle both HTTP and HTTPS
 	const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 	const socket = new WebSocket(
@@ -41,11 +63,6 @@ function initRoom(roomId) {
 	socket.onerror = function(e) {
 		console.error("WebSocket error:", e);
 	};
-
-	// Initialize whiteboard when the window loads
-	if (!wb && document.getElementById("whiteboard")) {
-		wb = new Whiteboard("whiteboard", onDraw);
-	}
 
 	// Process websocket message
 	socket.onmessage = function(event) {
@@ -118,11 +135,13 @@ function initRoom(roomId) {
 				return;
 			}
 			
-			const now = Date.now();
-			const timeLeft = Math.max(0, Math.floor((sessionEndTime - now) / 1000));
+			// Use a number for calculations
+			const now = new Date().getTime();
+			const endTime = sessionEndTime.getTime();
+			const timeLeft = Math.max(0, Math.floor((endTime - now) / 1000));
 			
-			// Log without trying to call toISOString on a number
-			console.log("Time left:", timeLeft, "seconds", "Current time:", new Date(now).toISOString());
+			// Log with proper date objects
+			console.log("Time left:", timeLeft, "seconds", "Current time:", new Date().toISOString());
 			
 			// Format time as MM:SS
 			const minutes = Math.floor(timeLeft / 60);
@@ -209,43 +228,3 @@ document.addEventListener('DOMContentLoaded', function() {
 		console.error("Room ID element not found");
 	}
 });
-
-// Make the clearWhiteboard function globally available
-window.clearWhiteboard = function() {
-	console.log("Clearing whiteboard...");
-	if (!wb) {
-		console.error("Whiteboard not initialized");
-		return;
-	}
-	
-	const canvas = document.getElementById("whiteboard");
-	if (!canvas) {
-		console.error("Whiteboard canvas not found");
-		return;
-	}
-	
-	const ctx = canvas.getContext("2d");
-	ctx.clearRect(0, 0, canvas.width, canvas.height);
-	
-	// Send the cleared whiteboard to other users
-	if (window.onDraw) {
-		window.onDraw(wb.getCanvasData(), {clear: true});
-	}
-};
-
-// Also make the other whiteboard functions globally available
-window.setWBColor = function() {
-	if (wb) {
-		wb.strokeStyle = document.getElementById("colorPicker").value;
-	} else {
-		console.error("Whiteboard not initialized");
-	}
-};
-
-window.setWBLine = function() {
-	if (wb) {
-		wb.lineWidth = document.getElementById("lineWidth").value;
-	} else {
-		console.error("Whiteboard not initialized");
-	}
-};
