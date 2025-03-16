@@ -1,2 +1,2 @@
 release: python manage.py migrate
-web: gunicorn interview_platform.asgi:application -k uvicorn.workers.UvicornWorker 
+web: daphne interview_platform.asgi:application --port $PORT --bind 0.0.0.0 
