@@ -121,7 +121,8 @@ function initRoom(roomId) {
 			const now = Date.now();
 			const timeLeft = Math.max(0, Math.floor((sessionEndTime - now) / 1000));
 			
-			console.log("Time left:", timeLeft, "seconds", "Current time:", now.toISOString());
+			// Log without trying to call toISOString on a number
+			console.log("Time left:", timeLeft, "seconds", "Current time:", new Date(now).toISOString());
 			
 			// Format time as MM:SS
 			const minutes = Math.floor(timeLeft / 60);
@@ -209,24 +210,9 @@ document.addEventListener('DOMContentLoaded', function() {
 	}
 });
 
-// Global whiteboard functions
-function setWBColor() {
-	if (wb) {
-		wb.strokeStyle = document.getElementById("colorPicker").value;
-	} else {
-		console.error("Whiteboard not initialized");
-	}
-}
-
-function setWBLine() {
-	if (wb) {
-		wb.lineWidth = document.getElementById("lineWidth").value;
-	} else {
-		console.error("Whiteboard not initialized");
-	}
-}
-
-function clearWhiteboard() {
+// Make the clearWhiteboard function globally available
+window.clearWhiteboard = function() {
+	console.log("Clearing whiteboard...");
 	if (!wb) {
 		console.error("Whiteboard not initialized");
 		return;
@@ -245,4 +231,21 @@ function clearWhiteboard() {
 	if (window.onDraw) {
 		window.onDraw(wb.getCanvasData(), {clear: true});
 	}
-}
+};
+
+// Also make the other whiteboard functions globally available
+window.setWBColor = function() {
+	if (wb) {
+		wb.strokeStyle = document.getElementById("colorPicker").value;
+	} else {
+		console.error("Whiteboard not initialized");
+	}
+};
+
+window.setWBLine = function() {
+	if (wb) {
+		wb.lineWidth = document.getElementById("lineWidth").value;
+	} else {
+		console.error("Whiteboard not initialized");
+	}
+};
