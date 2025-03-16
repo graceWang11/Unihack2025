@@ -147,71 +147,48 @@ function onTextChange() {
 	}
 }
 
-// Simple timer implementation - no fancy synchronization
-function updateTimerFromServer(endTimeStr) {
-	console.log("Setting up timer with:", endTimeStr);
-	// Clear any existing timer
-	if (window.timerInterval) {
-		clearInterval(window.timerInterval);
-	}
-	
-	// Just use a simple countdown from 15 minutes
-	window.remainingSeconds = 900; // 15 minutes
-	
-	// Start a new countdown
-	updateTimerDisplay();
-	window.timerInterval = setInterval(updateTimerDisplay, 1000);
-	
-	console.log("Simple timer started");
-}
+// Simplest possible timer implementation
+window.remainingSeconds = 900; // 15 minutes
 
-// Simple timer display function
-function updateTimerDisplay() {
-	try {
-		const timerElement = document.getElementById('timer');
-		if (!timerElement) {
-			console.error("Timer element not found");
-			return;
-		}
-		
-		// Decrement the time
-		window.remainingSeconds--;
-		
-		// Make sure we don't go below zero
-		if (window.remainingSeconds < 0) {
-			window.remainingSeconds = 0;
-			if (window.timerInterval) {
+// Start the timer immediately when the page loads
+window.onload = function() {
+	// Start a simple countdown timer
+	window.timerInterval = setInterval(function() {
+		try {
+			const timerElement = document.getElementById('timer');
+			if (!timerElement) return;
+			
+			// Decrement time
+			window.remainingSeconds--;
+			
+			// Handle timer expiration
+			if (window.remainingSeconds <= 0) {
 				clearInterval(window.timerInterval);
+				alert('Time is up!');
+				window.location.href = '/';
+				return;
 			}
 			
-			// Remove navigation warning
-			window.onbeforeunload = null;
+			// Update display
+			const minutes = Math.floor(window.remainingSeconds / 60);
+			const seconds = window.remainingSeconds % 60;
+			const formattedTime = 
+				String(minutes).padStart(2, '0') + ':' + 
+				String(seconds).padStart(2, '0');
 			
-			// Alert and redirect
-			alert('Your interview session has ended.');
-			window.location.href = '/';
-			return;
+			timerElement.textContent = 'Time remaining: ' + formattedTime;
+			
+			// Update colors
+			if (window.remainingSeconds < 60) {
+				timerElement.className = 'alert alert-danger';
+			} else if (window.remainingSeconds < 300) {
+				timerElement.className = 'alert alert-warning';
+			}
+		} catch (e) {
+			console.error("Simple timer error:", e);
 		}
-		
-		// Format the time
-		const minutes = Math.floor(window.remainingSeconds / 60);
-		const seconds = window.remainingSeconds % 60;
-		const formattedTime = 
-			String(minutes).padStart(2, '0') + ':' + 
-			String(seconds).padStart(2, '0');
-		
-		timerElement.textContent = 'Time remaining: ' + formattedTime;
-		
-		// Update timer classes based on time left
-		if (window.remainingSeconds < 60) {
-			timerElement.className = 'alert alert-danger';
-		} else if (window.remainingSeconds < 300) {
-			timerElement.className = 'alert alert-warning';
-		}
-	} catch (error) {
-		console.error("Error updating timer:", error);
-	}
-}
+	}, 1000);
+};
 
 // Start a simple 15-minute timer
 function startSessionTimer(seconds) {

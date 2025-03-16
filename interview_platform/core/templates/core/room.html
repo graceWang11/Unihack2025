@@ -195,6 +195,37 @@
         }, 1000);
     }
 </script>
+
+<!-- Add this at the end of the page, before the closing body tag -->
+<script>
+    // Simplest possible timer
+    document.addEventListener('DOMContentLoaded', function() {
+        let seconds = 900; // 15 minutes
+        const timerElement = document.getElementById('timer');
+        
+        const countdownTimer = setInterval(function() {
+            seconds--;
+            if (seconds <= 0) {
+                clearInterval(countdownTimer);
+                alert('Time is up!');
+                window.location.href = '/';
+            }
+            
+            const min = Math.floor(seconds / 60);
+            const sec = seconds % 60;
+            timerElement.textContent = 'Time remaining: ' + 
+                String(min).padStart(2, '0') + ':' + 
+                String(sec).padStart(2, '0');
+                
+            // Update color
+            if (seconds < 60) {
+                timerElement.className = 'alert alert-danger';
+            } else if (seconds < 300) {
+                timerElement.className = 'alert alert-warning';
+            }
+        }, 1000);
+    });
+</script>
 {% endblock %}
 
 {% block content %}
