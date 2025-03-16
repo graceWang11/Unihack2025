@@ -1,13 +1,12 @@
-// room.js - Version 2.0.0 (Forced update)
-console.log("Loading room.js version 2.0.0");
+// room.js - Version 3.0.0 (Final Fix)
+console.log("Loading room.js version 3.0.0");
 
-// Global variables
-let wb = null;
-let socket = null;
-let uid = "";
-let timerInterval = null;
-let sessionEndTime = null;
-let whiteBoardInitialized = false;
+// Global variables - explicitly attach to window
+window.socket = null;
+window.uid = "";
+window.wb = null;
+window.timerInterval = null;
+window.sessionEndTime = null;
 
 // Initialize the room connection
 function initRoom(roomId) {
@@ -15,17 +14,17 @@ function initRoom(roomId) {
 	
 	// Connect to WebSocket - handle both HTTP and HTTPS
 	const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-	socket = new WebSocket(
+	window.socket = new WebSocket(
 		`${protocol}//${window.location.host}/ws/`
 	);
 	
 	// Make socket globally available
-	window.roomSocket = socket;
+	window.roomSocket = window.socket;
 	
-	socket.onopen = function(e) {
+	window.socket.onopen = function(e) {
 		console.log("WebSocket connection established");
 		// Join the room
-		socket.send(JSON.stringify({
+		window.socket.send(JSON.stringify({
 			'join': roomId
 		}));
 		
@@ -33,12 +32,19 @@ function initRoom(roomId) {
 		initWhiteboard();
 		
 		// Request timer state
-		socket.send(JSON.stringify({
+		window.socket.send(JSON.stringify({
 			'type': 'get_timer'
 		}));
+		
+		// Set up the text change handler
+		if (document.getElementById('editor')) {
+			document.getElementById('editor').addEventListener('keyup', function() {
+				onTextChange();
+			});
+		}
 	};
 	
-	socket.onclose = function(e) {
+	window.socket.onclose = function(e) {
 		console.log("WebSocket connection closed");
 		// Don't redirect on close - just try to reconnect
 		setTimeout(function() {
@@ -47,12 +53,12 @@ function initRoom(roomId) {
 		}, 1000);
 	};
 	
-	socket.onerror = function(e) {
+	window.socket.onerror = function(e) {
 		console.error("WebSocket error:", e);
 	};
 
 	// Process websocket message
-	socket.onmessage = function(event) {
+	window.socket.onmessage = function(event) {
 		try {
 			const data = JSON.parse(event.data);
 			
@@ -63,10 +69,12 @@ function initRoom(roomId) {
 			}
 
 			if (data.join) {
-				uid = data.join;
-				console.log("Joined as user " + uid);
+				window.uid = data.join;
+				console.log("Joined as user " + window.uid);
 			} else if (data.type == "txt_update") {
-				document.getElementById("editor").value = data.data;
+				if (document.getElementById("editor")) {
+					document.getElementById("editor").value = data.data;
+				}
 			} else if (data.type == "wb_buffer") {
 				if (window.wb) {
 					window.wb.setCanvasData(data.data);
@@ -79,22 +87,11 @@ function initRoom(roomId) {
 			console.error("Error processing WebSocket message:", error);
 		}
 	};
-
-	// Make onTextChange available globally
-	window.onTextChange = function() {
-		if (!socket || socket.readyState !== WebSocket.OPEN) {
-			console.error("Cannot send text update: WebSocket not open");
-			return;
-		}
-		
-		const content = document.getElementById("editor").value;
-		socket.send(JSON.stringify({ id: uid, type: "txt_update", data: content }));
-	};
 }
 
 // Initialize the whiteboard
 function initWhiteboard() {
-	console.log("Initializing whiteboard (version 2.0)");
+	console.log("Initializing whiteboard (version 3.0)");
 	const canvas = document.getElementById("whiteboard");
 	if (!canvas) {
 		console.error("Whiteboard canvas not found");
@@ -102,14 +99,14 @@ function initWhiteboard() {
 	}
 	
 	try {
-		// Create the whiteboard object with delayed verification
+		// Create the whiteboard object with inline callback
 		window.wb = new Whiteboard("whiteboard", function(buff, opt) {
 			// This is the onDraw callback
 			if (window.wb) {
 				window.wb.draw(buff, opt);
-				if (socket && socket.readyState === WebSocket.OPEN) {
-					socket.send(JSON.stringify({ 
-						id: uid, 
+				if (window.socket && window.socket.readyState === WebSocket.OPEN) {
+					window.socket.send(JSON.stringify({ 
+						id: window.uid, 
 						type: "wb_buffer", 
 						data: window.wb.getCanvasData() 
 					}));
@@ -117,113 +114,33 @@ function initWhiteboard() {
 			}
 		});
 		
-		// Make wb globally available and mark as initialized
-		wb = window.wb;
-		whiteBoardInitialized = true;
-		
-		// Also set onDraw globally
-		window.onDraw = function(buff, opt) {
-			if (window.wb) {
-				window.wb.draw(buff, opt);
-				if (socket && socket.readyState === WebSocket.OPEN) {
-					socket.send(JSON.stringify({ 
-						id: uid, 
-						type: "wb_buffer", 
-						data: window.wb.getCanvasData() 
-					}));
-				}
-			}
-		};
-		
 		console.log("Whiteboard initialized successfully");
-		
-		// Initialize the whiteboard controls
-		initWhiteboardControls();
 	} catch (error) {
 		console.error("Error initializing whiteboard:", error);
 	}
 }
 
-// Initialize whiteboard controls directly
-function initWhiteboardControls() {
-	console.log("Setting up whiteboard controls");
+// Function to handle text changes in the editor
+function onTextChange() {
+	const editor = document.getElementById("editor");
+	if (!editor) {
+		console.error("Editor element not found");
+		return;
+	}
 	
-	// Define clearWhiteboard function globally
-	window.clearWhiteboard = function() {
-		console.log("Clearing whiteboard (v2)");
-		if (!window.wb) {
-			console.error("Cannot clear: Whiteboard not initialized");
-			return;
-		}
-		
-		try {
-			const canvas = document.getElementById("whiteboard");
-			if (!canvas) {
-				console.error("Whiteboard canvas not found");
-				return;
-			}
-			
-			const ctx = canvas.getContext("2d");
-			ctx.clearRect(0, 0, canvas.width, canvas.height);
-			console.log("Canvas cleared successfully");
-			
-			// Send the cleared whiteboard to other users
-			if (socket && socket.readyState === WebSocket.OPEN) {
-				socket.send(JSON.stringify({ 
-					id: uid, 
-					type: "wb_buffer", 
-					data: window.wb.getCanvasData() 
-				}));
-				console.log("Clear event sent to server");
-			}
-		} catch (error) {
-			console.error("Error clearing whiteboard:", error);
-		}
-	};
+	if (!window.socket || window.socket.readyState !== WebSocket.OPEN) {
+		console.error("Cannot send text update: WebSocket not open");
+		return;
+	}
 	
-	// Define setWBColor function globally
-	window.setWBColor = function() {
-		console.log("Setting whiteboard color (v2)");
-		if (!window.wb) {
-			console.error("Cannot set color: Whiteboard not initialized");
-			return;
-		}
-		
-		try {
-			const colorPicker = document.getElementById("colorPicker");
-			if (!colorPicker) {
-				console.error("Color picker not found");
-				return;
-			}
-			
-			window.wb.strokeStyle = colorPicker.value;
-			console.log("Color set to:", colorPicker.value);
-		} catch (error) {
-			console.error("Error setting whiteboard color:", error);
-		}
-	};
-	
-	// Define setWBLine function globally
-	window.setWBLine = function() {
-		console.log("Setting whiteboard line width (v2)");
-		if (!window.wb) {
-			console.error("Cannot set line width: Whiteboard not initialized");
-			return;
-		}
-		
-		try {
-			const lineWidth = document.getElementById("lineWidth");
-			if (!lineWidth) {
-				console.error("Line width control not found");
-				return;
-			}
-			
-			window.wb.lineWidth = lineWidth.value;
-			console.log("Line width set to:", lineWidth.value);
-		} catch (error) {
-			console.error("Error setting whiteboard line width:", error);
-		}
-	};
+	try {
+		window.socket.send(JSON.stringify({
+			'type': 'txt_update',
+			'data': editor.value
+		}));
+	} catch (error) {
+		console.error("Error sending text update:", error);
+	}
 }
 
 // Function to update timer from server time
@@ -231,19 +148,29 @@ function updateTimerFromServer(endTimeStr) {
 	try {
 		// Parse the end time from the server - carefully
 		console.log("Raw end time from server:", endTimeStr);
-		const endTime = new Date(endTimeStr);
-		console.log("Parsed end time:", endTime);
 		
-		sessionEndTime = endTime;
-		
-		// Clear any existing timer
-		if (timerInterval) {
-			clearInterval(timerInterval);
+		// Handle the date parsing carefully
+		let endTime;
+		if (typeof endTimeStr === 'string') {
+			endTime = new Date(endTimeStr);
+		} else if (typeof endTimeStr === 'number') {
+			endTime = new Date(endTimeStr * 1000); // Convert seconds to milliseconds
+		} else {
+			console.error("Invalid end time format:", endTimeStr);
+			return;
 		}
 		
-		// Start a new timer based on the server end time
+		console.log("Parsed end time:", endTime);
+		
+		window.sessionEndTime = endTime;
+		
+		// Clear any existing timer
+		if (window.timerInterval) {
+			clearInterval(window.timerInterval);
+		}
+		
 		updateTimerDisplay();
-		timerInterval = setInterval(updateTimerDisplay, 1000);
+		window.timerInterval = setInterval(updateTimerDisplay, 1000);
 		
 		console.log("Timer started successfully");
 	} catch (error) {
@@ -260,22 +187,31 @@ function updateTimerDisplay() {
 			return;
 		}
 		
-		if (!sessionEndTime) {
+		if (!window.sessionEndTime) {
 			console.error("Session end time not set");
 			return;
 		}
 		
-		// Calculate time left in milliseconds
+		// Calculate time left in milliseconds - handle both Date objects and numbers
 		const now = new Date();
-		const timeLeftMs = sessionEndTime.getTime() - now.getTime();
-		const timeLeft = Math.max(0, Math.floor(timeLeftMs / 1000));
+		let timeLeftMs;
 		
-		console.log("Time remaining:", timeLeft, "seconds");
+		if (window.sessionEndTime instanceof Date) {
+			timeLeftMs = window.sessionEndTime.getTime() - now.getTime();
+		} else {
+			timeLeftMs = window.sessionEndTime - now.getTime();
+		}
+		
+		const timeLeft = Math.max(0, Math.floor(timeLeftMs / 1000));
 		
 		// Format time as MM:SS
 		const minutes = Math.floor(timeLeft / 60);
-		const secs = timeLeft % 60;
-		timerElement.textContent = `Time remaining: ${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+		const seconds = timeLeft % 60;
+		const formattedTime = 
+			String(minutes).padStart(2, '0') + ':' + 
+			String(seconds).padStart(2, '0');
+		
+		timerElement.textContent = 'Time remaining: ' + formattedTime;
 		
 		// Change color when less than 5 minutes
 		if (timeLeft < 300) {
@@ -289,14 +225,14 @@ function updateTimerDisplay() {
 		
 		// End session when timer reaches 0
 		if (timeLeft <= 0) {
-			clearInterval(timerInterval);
+			clearInterval(window.timerInterval);
 			
 			// Remove the navigation warning
 			window.onbeforeunload = null;
 			
 			// Mark the session as expired on the server
-			if (socket && socket.readyState === WebSocket.OPEN) {
-				socket.send(JSON.stringify({
+			if (window.socket && window.socket.readyState === WebSocket.OPEN) {
+				window.socket.send(JSON.stringify({
 					'type': 'expire_session',
 					'room': document.getElementById('roomId').value
 				}));
@@ -321,7 +257,7 @@ function startSessionTimer(seconds) {
 		return;
 	}
 	
-	if (!socket || socket.readyState !== WebSocket.OPEN) {
+	if (!window.socket || window.socket.readyState !== WebSocket.OPEN) {
 		console.error("Cannot start timer: WebSocket not open");
 		return;
 	}
@@ -329,7 +265,7 @@ function startSessionTimer(seconds) {
 	console.log("Sending start_timer request to server for room", roomId);
 	// Send request to start timer on the server
 	try {
-		socket.send(JSON.stringify({
+		window.socket.send(JSON.stringify({
 			'type': 'start_timer',
 			'room': roomId,
 			'duration': seconds
@@ -341,10 +277,13 @@ function startSessionTimer(seconds) {
 
 // Make startSessionTimer available globally
 window.startSessionTimer = startSessionTimer;
+window.onTextChange = onTextChange;
+window.updateTimerDisplay = updateTimerDisplay;
+window.updateTimerFromServer = updateTimerFromServer;
 
 // Initialize the room when the page loads
 document.addEventListener('DOMContentLoaded', function() {
-	console.log("DOM loaded, initializing room (v2.0)");
+	console.log("DOM loaded, initializing room (v3.0)");
 	const roomIdElement = document.getElementById('roomId');
 	if (roomIdElement) {
 		const roomId = roomIdElement.value;

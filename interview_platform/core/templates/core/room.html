@@ -26,12 +26,96 @@
 {% endblock %}
 
 {% block script %}
+<!-- Load the whiteboard library -->
+<script src="{% static 'js/whiteboard.js' %}?v={{ CURRENT_TIMESTAMP }}"></script>
+
+<!-- Define critical whiteboard functions directly in the page -->
 <script>
-    // Force reload of JS files to break cache
-    const cacheBuster = "?v=" + new Date().getTime();
-    document.write('<script src="{% static "js/whiteboard.js" %}' + cacheBuster + '"><\/script>');
-    document.write('<script src="{% static "js/room.js" %}' + cacheBuster + '"><\/script>');
+    // Pre-define whiteboard functions to avoid "not defined" errors
+    function clearWhiteboard() {
+        console.log("Clearing whiteboard (inline)");
+        try {
+            const canvas = document.getElementById("whiteboard");
+            if (!canvas) {
+                console.error("Whiteboard canvas not found");
+                return;
+            }
+            
+            if (!window.wb) {
+                console.error("Whiteboard not initialized");
+                return;
+            }
+            
+            const ctx = canvas.getContext("2d");
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            console.log("Canvas cleared successfully");
+            
+            // Send the cleared whiteboard to other users if socket is available
+            if (window.socket && window.socket.readyState === 1) {
+                window.socket.send(JSON.stringify({ 
+                    id: window.uid || "unknown", 
+                    type: "wb_buffer", 
+                    data: window.wb.getCanvasData() 
+                }));
+                console.log("Clear event sent to server");
+            }
+        } catch (error) {
+            console.error("Error clearing whiteboard:", error);
+        }
+    }
+    
+    function setWBColor() {
+        console.log("Setting whiteboard color (inline)");
+        try {
+            const colorPicker = document.getElementById("colorPicker");
+            if (!colorPicker) {
+                console.error("Color picker not found");
+                return;
+            }
+            
+            if (!window.wb) {
+                console.error("Whiteboard not initialized");
+                return;
+            }
+            
+            window.wb.strokeStyle = colorPicker.value;
+            console.log("Color set to:", colorPicker.value);
+        } catch (error) {
+            console.error("Error setting whiteboard color:", error);
+        }
+    }
+    
+    function setWBLine() {
+        console.log("Setting whiteboard line width (inline)");
+        try {
+            const lineWidth = document.getElementById("lineWidth");
+            if (!lineWidth) {
+                console.error("Line width control not found");
+                return;
+            }
+            
+            if (!window.wb) {
+                console.error("Whiteboard not initialized");
+                return;
+            }
+            
+            window.wb.lineWidth = lineWidth.value;
+            console.log("Line width set to:", lineWidth.value);
+        } catch (error) {
+            console.error("Error setting whiteboard line width:", error);
+        }
+    }
+    
+    // Make these functions globally available
+    window.clearWhiteboard = clearWhiteboard;
+    window.setWBColor = setWBColor;
+    window.setWBLine = setWBLine;
 </script>
+
+<!-- Now load the main room script -->
+<script src="{% static 'js/room.js' %}?v={{ CURRENT_TIMESTAMP }}"></script>
+
+<!-- Initialize the room -->
 <script>
     // Pass the room ID to JavaScript
     const roomId = "{{ room }}";
@@ -67,7 +151,7 @@
     <div class="row">
         <div class="col-12">
             <h2>Interview Session: {{ session.title }}</h2>
-            <div id="timer" class="alert alert-info">Time remaining: 01:00</div>
+            <div id="timer" class="alert alert-info">Time remaining: 15:00</div>
         </div>
     </div>
     

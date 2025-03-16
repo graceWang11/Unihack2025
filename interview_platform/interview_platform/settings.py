@@ -19,6 +19,7 @@ except ImportError:
     # For local development without dj_database_url
     dj_database_url = None
 from django.core.management.utils import get_random_secret_key
+import time
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -71,6 +72,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'interview_platform.context_processors.add_timestamp',
             ],
         },
     },
@@ -188,3 +190,7 @@ if not DEBUG:
     SECURE_HSTS_SECONDS = 31536000  # 1 year
     SECURE_HSTS_PRELOAD = True
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+
+def add_timestamp(request):
+    """Add current timestamp to context for cache-busting."""
+    return {'CURRENT_TIMESTAMP': int(time.time())}
