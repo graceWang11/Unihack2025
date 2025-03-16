@@ -1,31 +1,33 @@
 {% extends 'core/base.html' %}
 {% block content %}
-<div class="container align-items-center">
-    <div class="col-md-6">
-        <div class="card mb-4">
-            <div class="card-header bg-primary text-white">
-                <h3 class="card-title mb-0">Create a New Session</h3>
-            </div>
-            <div class="card-body">
-                <form method="POST" action="{% url 'create_session' %}">
-                    {% csrf_token %}
-                    <div class="form-group">
-                        <label for="title">Session Title:</label>
-                        <input type="text" name="title" class="form-control" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="description">Description:</label>
-                        <textarea name="description" class="form-control"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="candidate_emails">Candidate Emails (comma separated):</label>
-                        <input type="text" class="form-control" name="candidate_emails" placeholder="candidate1@example.com, candidate2@example.com">
-                    </div>
-                    <div class="form-group mt-2">
-                        <button type="submit" class="btn btn-success">Create Session</button>
-                        <a href="{% url 'home' %}" class="btn btn-secondary">Cancel</a>
-                    </div>
-                </form>
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="card-title mb-0">Create a New Session</h3>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{% url 'create_session' %}">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <label for="title">Session Title:</label>
+                            <input type="text" name="title" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="description">Description:</label>
+                            <textarea name="description" class="form-control"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="candidate_emails">Candidate Emails (comma separated):</label>
+                            <input type="text" class="form-control" name="candidate_emails" placeholder="candidate1@example.com, candidate2@example.com">
+                        </div>
+                        <div class="form-group mt-2">
+                            <button type="submit" class="btn btn-success">Create Session</button>
+                            <a href="{% url 'home' %}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
