@@ -1,3 +1,6 @@
+// Global whiteboard variable
+let wb;
+
 // Initialize the room connection
 function initRoom(roomId) {
 	console.log("Initializing room with ID:", roomId);
@@ -39,9 +42,10 @@ function initRoom(roomId) {
 		console.error("WebSocket error:", e);
 	};
 
-	window.onload = function() {
+	// Initialize whiteboard when the window loads
+	if (!wb && document.getElementById("whiteboard")) {
 		wb = new Whiteboard("whiteboard", onDraw);
-	};
+	}
 
 	// Process websocket message
 	socket.onmessage = function(event) {
@@ -59,7 +63,9 @@ function initRoom(roomId) {
 		} else if (data.type == "txt_update") {
 			document.getElementById("editor").value = data.data;
 		} else if (data.type == "wb_buffer") {
-			wb.setCanvasData(data.data);
+			if (wb) {
+				wb.setCanvasData(data.data);
+			}
 		} else if (data.type == "timer_update") {
 			// Update the timer with the server's time
 			updateTimerFromServer(data.end_time);
@@ -74,8 +80,10 @@ function initRoom(roomId) {
 
 	// Make onDraw available globally
 	window.onDraw = function(buff, opt) {
-		wb.draw(buff, opt);
-		socket.send(JSON.stringify({ id: uid, type: "wb_buffer", data: wb.getCanvasData() }));
+		if (wb) {
+			wb.draw(buff, opt);
+			socket.send(JSON.stringify({ id: uid, type: "wb_buffer", data: wb.getCanvasData() }));
+		}
 	};
 
 	// Store socket in window object so it can be accessed globally
@@ -157,16 +165,32 @@ function initRoom(roomId) {
 function startSessionTimer(seconds) {
 	console.log("Starting session timer for", seconds, "seconds");
 	const roomId = document.getElementById('roomId').value;
-	if (roomId && window.roomSocket) {
-		console.log("Sending start_timer request to server for room", roomId);
-		// Send request to start timer on the server
+	
+	if (!roomId) {
+		console.error("Cannot start timer: roomId not available");
+		return;
+	}
+	
+	if (!window.roomSocket) {
+		console.error("Cannot start timer: roomSocket not available");
+		return;
+	}
+	
+	if (window.roomSocket.readyState !== WebSocket.OPEN) {
+		console.error("Cannot start timer: WebSocket not open");
+		return;
+	}
+	
+	console.log("Sending start_timer request to server for room", roomId);
+	// Send request to start timer on the server
+	try {
 		window.roomSocket.send(JSON.stringify({
 			'type': 'start_timer',
 			'room': roomId,
 			'duration': seconds
 		}));
-	} else {
-		console.error("Cannot start timer: roomId or roomSocket not available");
+	} catch (error) {
+		console.error("Error sending start_timer request:", error);
 	}
 }
 
@@ -185,16 +209,35 @@ document.addEventListener('DOMContentLoaded', function() {
 	}
 });
 
+// Global whiteboard functions
 function setWBColor() {
-	wb.strokeStyle = document.getElementById("colorPicker").value;
+	if (wb) {
+		wb.strokeStyle = document.getElementById("colorPicker").value;
+	} else {
+		console.error("Whiteboard not initialized");
+	}
 }
 
 function setWBLine() {
-	wb.lineWidth = document.getElementById("lineWidth").value;
+	if (wb) {
+		wb.lineWidth = document.getElementById("lineWidth").value;
+	} else {
+		console.error("Whiteboard not initialized");
+	}
 }
 
 function clearWhiteboard() {
+	if (!wb) {
+		console.error("Whiteboard not initialized");
+		return;
+	}
+	
 	const canvas = document.getElementById("whiteboard");
+	if (!canvas) {
+		console.error("Whiteboard canvas not found");
+		return;
+	}
+	
 	const ctx = canvas.getContext("2d");
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
 	

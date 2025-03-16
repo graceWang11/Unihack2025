@@ -40,10 +40,24 @@
         initRoom(roomId);
         
         // Start the timer on the server (only the first tab will actually set the timer)
+        // Wait longer for WebSocket to connect
         setTimeout(function() {
-            console.log("Starting session timer");
-            startSessionTimer(900); 
-        }, 1000); // Longer delay to ensure WebSocket is connected
+            console.log("Checking if WebSocket is ready to start timer");
+            if (window.roomSocket && window.roomSocket.readyState === WebSocket.OPEN) {
+                console.log("WebSocket is open, starting session timer");
+                startSessionTimer(900);
+            } else {
+                console.log("WebSocket not ready, waiting longer");
+                setTimeout(function() {
+                    console.log("Trying again to start timer");
+                    if (window.roomSocket) {
+                        startSessionTimer(900);
+                    } else {
+                        console.error("Could not start timer: WebSocket not available");
+                    }
+                }, 3000);
+            }
+        }, 2000);
         
         // Set up the text change handler
         document.getElementById('editor').addEventListener('keyup', function() {
@@ -77,11 +91,15 @@
         <div class="col-12 col-md-6 whiteboard-container">
             <h3>Whiteboard</h3>
             <canvas id="whiteboard" width="600" height="400" style="border:1px solid black;"></canvas>
-            <div class="slidecontainer">
-              <input type="range" min="1" max="10" value="5" class="slider" id="lineWidth" onchange="setWBLine()">
+            <div class="mt-2">
+                <label for="lineWidth">Line Width:</label>
+                <input type="range" min="1" max="10" value="5" class="slider" id="lineWidth" onchange="setWBLine()">
+                
+                <label for="colorPicker" class="ms-2">Color:</label>
+                <input type="color" id="colorPicker" value="#000000" onchange="setWBColor()">
+                
+                <button class="btn btn-info ms-2" onclick="clearWhiteboard()">Clear</button>
             </div>
-            <input type="color" id="colorPicker" onchange="setWBColor()">
-            <button class="btn btn-info" onclick="clearWhiteboard()">Clear</button>
         </div>
     </div>
     
