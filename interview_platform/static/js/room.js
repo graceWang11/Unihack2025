@@ -1,43 +1,23 @@
-// Global whiteboard variable
-let wb;
+// Global variables
+let wb = null;
+let socket = null;
+let uid = "";
+let timerInterval = null;
+let sessionEndTime = null;
 
 // Initialize the room connection
 function initRoom(roomId) {
 	console.log("Initializing room with ID:", roomId);
 	
-	// Initialize whiteboard immediately
-	if (document.getElementById("whiteboard")) {
-		console.log("Initializing whiteboard");
-		window.wb = new Whiteboard("whiteboard", function(buff, opt) {
-			// This is the onDraw callback
-			if (window.wb) {
-				window.wb.draw(buff, opt);
-				if (socket && socket.readyState === WebSocket.OPEN) {
-					socket.send(JSON.stringify({ 
-						id: uid, 
-						type: "wb_buffer", 
-						data: window.wb.getCanvasData() 
-					}));
-				}
-			}
-		});
-		// Make wb globally available
-		wb = window.wb;
-	} else {
-		console.error("Whiteboard element not found");
-	}
-	
 	// Connect to WebSocket - handle both HTTP and HTTPS
 	const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-	const socket = new WebSocket(
+	socket = new WebSocket(
 		`${protocol}//${window.location.host}/ws/`
 	);
 	
-	// Current user id
-	let uid = "";
-	let timerInterval = null;
-	let sessionEndTime = null;
-
+	// Make socket globally available
+	window.roomSocket = socket;
+	
 	socket.onopen = function(e) {
 		console.log("WebSocket connection established");
 		// Join the room
@@ -49,6 +29,9 @@ function initRoom(roomId) {
 		socket.send(JSON.stringify({
 			'type': 'get_timer'
 		}));
+		
+		// Initialize whiteboard after socket is connected
+		initWhiteboard();
 	};
 	
 	socket.onclose = function(e) {
@@ -91,93 +74,139 @@ function initRoom(roomId) {
 
 	// Make onTextChange available globally
 	window.onTextChange = function() {
+		if (!socket || socket.readyState !== WebSocket.OPEN) {
+			console.error("Cannot send text update: WebSocket not open");
+			return;
+		}
+		
 		const content = document.getElementById("editor").value;
 		socket.send(JSON.stringify({ id: uid, type: "txt_update", data: content }));
 	};
+}
 
-	// Make onDraw available globally
-	window.onDraw = function(buff, opt) {
-		if (wb) {
-			wb.draw(buff, opt);
-			socket.send(JSON.stringify({ id: uid, type: "wb_buffer", data: wb.getCanvasData() }));
-		}
-	};
-
-	// Store socket in window object so it can be accessed globally
-	window.roomSocket = socket;
-	
-	// Function to update timer from server time
-	function updateTimerFromServer(endTimeStr) {
-		try {
-			// Parse the end time from the server
-			sessionEndTime = new Date(endTimeStr);
-			console.log("Session will end at:", sessionEndTime, "Current time:", Date.now());
-			
-			// Clear any existing timer
-			if (timerInterval) {
-				clearInterval(timerInterval);
-			}
-			
-			// Start a new timer based on the server end time
-			updateTimerDisplay();
-			timerInterval = setInterval(updateTimerDisplay, 1000);
-		} catch (error) {
-			console.error("Error updating timer:", error);
-		}
+// Initialize the whiteboard
+function initWhiteboard() {
+	console.log("Initializing whiteboard");
+	const canvas = document.getElementById("whiteboard");
+	if (!canvas) {
+		console.error("Whiteboard canvas not found");
+		return;
 	}
 	
-	// Function to update the timer display
-	function updateTimerDisplay() {
-		try {
-			const timerElement = document.getElementById('timer');
-			if (!timerElement || !sessionEndTime) {
-				console.error("Timer element or sessionEndTime not found");
-				return;
-			}
+	try {
+		// Create the whiteboard object
+		wb = new Whiteboard("whiteboard", handleDrawEvent);
+		
+		// Make wb globally available
+		window.wb = wb;
+		
+		console.log("Whiteboard initialized successfully");
+	} catch (error) {
+		console.error("Error initializing whiteboard:", error);
+	}
+}
+
+// Handle draw events from the whiteboard
+function handleDrawEvent(buff, opt) {
+	console.log("Draw event received");
+	if (!wb) {
+		console.error("Cannot handle draw event: Whiteboard not initialized");
+		return;
+	}
+	
+	if (!socket || socket.readyState !== WebSocket.OPEN) {
+		console.error("Cannot send draw event: WebSocket not open");
+		return;
+	}
+	
+	try {
+		// Draw locally
+		wb.draw(buff, opt);
+		
+		// Send to server
+		socket.send(JSON.stringify({ 
+			id: uid, 
+			type: "wb_buffer", 
+			data: wb.getCanvasData() 
+		}));
+		
+		console.log("Draw event sent to server");
+	} catch (error) {
+		console.error("Error handling draw event:", error);
+	}
+}
+
+// Make handleDrawEvent available globally
+window.onDraw = handleDrawEvent;
+
+// Function to update timer from server time
+function updateTimerFromServer(endTimeStr) {
+	try {
+		// Parse the end time from the server
+		sessionEndTime = new Date(endTimeStr);
+		console.log("Session will end at:", sessionEndTime.toISOString());
+		
+		// Clear any existing timer
+		if (timerInterval) {
+			clearInterval(timerInterval);
+		}
+		
+		// Start a new timer based on the server end time
+		updateTimerDisplay();
+		timerInterval = setInterval(updateTimerDisplay, 1000);
+	} catch (error) {
+		console.error("Error updating timer:", error);
+	}
+}
+
+// Function to update the timer display
+function updateTimerDisplay() {
+	try {
+		const timerElement = document.getElementById('timer');
+		if (!timerElement || !sessionEndTime) {
+			console.error("Timer element or sessionEndTime not found");
+			return;
+		}
+		
+		const now = new Date();
+		const timeLeft = Math.max(0, Math.floor((sessionEndTime - now) / 1000));
+		
+		// Format time as MM:SS
+		const minutes = Math.floor(timeLeft / 60);
+		const secs = timeLeft % 60;
+		timerElement.textContent = `Time remaining: ${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+		
+		// Change color when less than 5 minutes
+		if (timeLeft < 300) {
+			timerElement.className = 'alert alert-warning';
+		}
+		
+		// Change color when less than 1 minute
+		if (timeLeft < 60) {
+			timerElement.className = 'alert alert-danger';
+		}
+		
+		// End session when timer reaches 0
+		if (timeLeft <= 0) {
+			clearInterval(timerInterval);
 			
-			// Use a number for calculations
-			const now = new Date().getTime();
-			const endTime = sessionEndTime.getTime();
-			const timeLeft = Math.max(0, Math.floor((endTime - now) / 1000));
+			// Remove the navigation warning
+			window.onbeforeunload = null;
 			
-			// Log with proper date objects
-			console.log("Time left:", timeLeft, "seconds", "Current time:", new Date().toISOString());
-			
-			// Format time as MM:SS
-			const minutes = Math.floor(timeLeft / 60);
-			const secs = timeLeft % 60;
-			timerElement.textContent = `Time remaining: ${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-			
-			// Change color when less than 5 minutes
-			if (timeLeft < 300) {
-				timerElement.className = 'alert alert-warning';
-			}
-			
-			// Change color when less than 1 minute
-			if (timeLeft < 60) {
-				timerElement.className = 'alert alert-danger';
-			}
-			
-			// End session when timer reaches 0
-			if (timeLeft <= 0) {
-				clearInterval(timerInterval);
-				
-				// Remove the navigation warning
-				window.onbeforeunload = null;
-				
-				// Mark the session as expired on the server
+			// Mark the session as expired on the server
+			if (socket && socket.readyState === WebSocket.OPEN) {
 				socket.send(JSON.stringify({
 					'type': 'expire_session',
-					'room': roomId
+					'room': document.getElementById('roomId').value
 				}));
-				
-				// Show alert and redirect
-				alert('Your interview session has ended. Thank you for participating!');
-				window.location.href = '/?refresh=1';
 			}
-		} catch (error) {
-			console.error("Error updating timer display:", error);
+			
+			// Show alert and redirect
+			alert('Your interview session has ended. Thank you for participating!');
+			window.location.href = '/?refresh=1';
 		}
+	} catch (error) {
+		console.error("Error updating timer display:", error);
 	}
 }
 
@@ -191,12 +220,7 @@ function startSessionTimer(seconds) {
 		return;
 	}
 	
-	if (!window.roomSocket) {
-		console.error("Cannot start timer: roomSocket not available");
-		return;
-	}
-	
-	if (window.roomSocket.readyState !== WebSocket.OPEN) {
+	if (!socket || socket.readyState !== WebSocket.OPEN) {
 		console.error("Cannot start timer: WebSocket not open");
 		return;
 	}
@@ -204,7 +228,7 @@ function startSessionTimer(seconds) {
 	console.log("Sending start_timer request to server for room", roomId);
 	// Send request to start timer on the server
 	try {
-		window.roomSocket.send(JSON.stringify({
+		socket.send(JSON.stringify({
 			'type': 'start_timer',
 			'room': roomId,
 			'duration': seconds
@@ -214,8 +238,12 @@ function startSessionTimer(seconds) {
 	}
 }
 
-// Make sure this function is called when the page loads
+// Make startSessionTimer available globally
+window.startSessionTimer = startSessionTimer;
+
+// Initialize the room when the page loads
 document.addEventListener('DOMContentLoaded', function() {
+	console.log("DOM loaded, initializing room");
 	const roomIdElement = document.getElementById('roomId');
 	if (roomIdElement) {
 		const roomId = roomIdElement.value;

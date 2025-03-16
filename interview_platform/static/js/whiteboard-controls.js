@@ -10,11 +10,16 @@ function setWBColor() {
         return;
     }
     
-    if (typeof window.wb !== 'undefined') {
+    if (!window.wb) {
+        console.error("Whiteboard not initialized");
+        return;
+    }
+    
+    try {
         window.wb.strokeStyle = colorPicker.value;
         console.log("Color set to:", colorPicker.value);
-    } else {
-        console.error("Whiteboard not initialized");
+    } catch (error) {
+        console.error("Error setting whiteboard color:", error);
     }
 }
 
@@ -26,11 +31,16 @@ function setWBLine() {
         return;
     }
     
-    if (typeof window.wb !== 'undefined') {
+    if (!window.wb) {
+        console.error("Whiteboard not initialized");
+        return;
+    }
+    
+    try {
         window.wb.lineWidth = lineWidth.value;
         console.log("Line width set to:", lineWidth.value);
-    } else {
-        console.error("Whiteboard not initialized");
+    } catch (error) {
+        console.error("Error setting whiteboard line width:", error);
     }
 }
 
@@ -42,21 +52,25 @@ function clearWhiteboard() {
         return;
     }
     
-    if (typeof window.wb === 'undefined') {
+    if (!window.wb) {
         console.error("Whiteboard not initialized");
         return;
     }
     
-    const ctx = canvas.getContext("2d");
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    console.log("Canvas cleared");
-    
-    // Send the cleared whiteboard to other users
-    if (typeof window.onDraw === 'function') {
-        window.onDraw(window.wb.getCanvasData(), {clear: true});
-        console.log("Clear event sent to other users");
-    } else {
-        console.error("onDraw function not available");
+    try {
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        console.log("Canvas cleared");
+        
+        // Send the cleared whiteboard to other users
+        if (typeof window.onDraw === 'function') {
+            window.onDraw(window.wb.getCanvasData(), {clear: true});
+            console.log("Clear event sent to other users");
+        } else {
+            console.error("onDraw function not available");
+        }
+    } catch (error) {
+        console.error("Error clearing whiteboard:", error);
     }
 }
 
@@ -70,4 +84,9 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log("Whiteboard is initialized and ready");
         }
     }, 2000);
-}); 
+});
+
+// Make functions globally available
+window.setWBColor = setWBColor;
+window.setWBLine = setWBLine;
+window.clearWhiteboard = clearWhiteboard; 

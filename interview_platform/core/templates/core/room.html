@@ -37,35 +37,31 @@
     document.addEventListener('DOMContentLoaded', function() {
         console.log("Room page loaded, initializing room:", roomId);
         
-        // Connect to the room
-        initRoom(roomId);
-        
-        // Start the timer on the server (only the first tab will actually set the timer)
-        // Wait longer for WebSocket to connect
-        setTimeout(function() {
-            console.log("Checking if WebSocket is ready to start timer");
-            if (window.roomSocket && window.roomSocket.readyState === WebSocket.OPEN) {
-                console.log("WebSocket is open, starting session timer");
-                startSessionTimer(900);
-            } else {
-                console.log("WebSocket not ready, waiting longer");
-                setTimeout(function() {
-                    console.log("Trying again to start timer");
-                    if (window.roomSocket) {
-                        startSessionTimer(900);
-                    } else {
-                        console.error("Could not start timer: WebSocket not available");
-                    }
-                }, 3000);
-            }
-        }, 2000);
-        
         // Set up the text change handler
         document.getElementById('editor').addEventListener('keyup', function() {
             if (typeof window.onTextChange === 'function') {
                 window.onTextChange();
             }
         });
+        
+        // Start the timer on the server (only the first tab will actually set the timer)
+        setTimeout(function() {
+            console.log("Checking if WebSocket is ready to start timer");
+            if (window.roomSocket && window.roomSocket.readyState === WebSocket.OPEN) {
+                console.log("WebSocket is open, starting session timer");
+                window.startSessionTimer(900);
+            } else {
+                console.log("WebSocket not ready, waiting longer");
+                setTimeout(function() {
+                    console.log("Trying again to start timer");
+                    if (window.roomSocket) {
+                        window.startSessionTimer(900);
+                    } else {
+                        console.error("Could not start timer: WebSocket not available");
+                    }
+                }, 3000);
+            }
+        }, 2000);
     });
     
     // Prevent navigation away from the page
