@@ -49,26 +49,30 @@ function initRoom(roomId) {
 
 	// Process websocket message
 	socket.onmessage = function(event) {
-		const data = JSON.parse(event.data);
-		
-		// Only redirect if explicitly told to exit
-		if (data.exit === 1) { 
-			console.log("Server requested exit");
-			window.location.href = '/'; 
-		}
-
-		if (data.join) {
-			uid = data.join;
-			console.log("Joined as user " + uid);
-		} else if (data.type == "txt_update") {
-			document.getElementById("editor").value = data.data;
-		} else if (data.type == "wb_buffer") {
-			if (wb) {
-				wb.setCanvasData(data.data);
+		try {
+			const data = JSON.parse(event.data);
+			
+			// Only redirect if explicitly told to exit
+			if (data.exit === 1) { 
+				console.log("Server requested exit");
+				window.location.href = '/'; 
 			}
-		} else if (data.type == "timer_update") {
-			// Update the timer with the server's time
-			updateTimerFromServer(data.end_time);
+
+			if (data.join) {
+				uid = data.join;
+				console.log("Joined as user " + uid);
+			} else if (data.type == "txt_update") {
+				document.getElementById("editor").value = data.data;
+			} else if (data.type == "wb_buffer") {
+				if (window.wb) {
+					window.wb.setCanvasData(data.data);
+				}
+			} else if (data.type == "timer_update") {
+				// Update the timer with the server's time
+				updateTimerFromServer(data.end_time);
+			}
+		} catch (error) {
+			console.error("Error processing WebSocket message:", error);
 		}
 	};
 
@@ -95,10 +99,10 @@ function initWhiteboard() {
 	
 	try {
 		// Create the whiteboard object
-		wb = new Whiteboard("whiteboard", handleDrawEvent);
+		window.wb = new Whiteboard("whiteboard", handleDrawEvent);
 		
 		// Make wb globally available
-		window.wb = wb;
+		wb = window.wb;
 		
 		console.log("Whiteboard initialized successfully");
 	} catch (error) {
@@ -109,7 +113,7 @@ function initWhiteboard() {
 // Handle draw events from the whiteboard
 function handleDrawEvent(buff, opt) {
 	console.log("Draw event received");
-	if (!wb) {
+	if (!window.wb) {
 		console.error("Cannot handle draw event: Whiteboard not initialized");
 		return;
 	}
@@ -121,13 +125,13 @@ function handleDrawEvent(buff, opt) {
 	
 	try {
 		// Draw locally
-		wb.draw(buff, opt);
+		window.wb.draw(buff, opt);
 		
 		// Send to server
 		socket.send(JSON.stringify({ 
 			id: uid, 
 			type: "wb_buffer", 
-			data: wb.getCanvasData() 
+			data: window.wb.getCanvasData() 
 		}));
 		
 		console.log("Draw event sent to server");
@@ -143,8 +147,9 @@ window.onDraw = handleDrawEvent;
 function updateTimerFromServer(endTimeStr) {
 	try {
 		// Parse the end time from the server
-		sessionEndTime = new Date(endTimeStr);
-		console.log("Session will end at:", sessionEndTime.toISOString());
+		const endTime = new Date(endTimeStr);
+		sessionEndTime = endTime;
+		console.log("Session will end at:", endTime);
 		
 		// Clear any existing timer
 		if (timerInterval) {
@@ -169,7 +174,10 @@ function updateTimerDisplay() {
 		}
 		
 		const now = new Date();
-		const timeLeft = Math.max(0, Math.floor((sessionEndTime - now) / 1000));
+		const timeLeftMs = sessionEndTime - now;
+		const timeLeft = Math.max(0, Math.floor(timeLeftMs / 1000));
+		
+		console.log("Time left:", timeLeft, "seconds");
 		
 		// Format time as MM:SS
 		const minutes = Math.floor(timeLeft / 60);
